@@ -18,9 +18,12 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="InspectorDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="list.h">
+    <ClInclude Include="InspectorDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

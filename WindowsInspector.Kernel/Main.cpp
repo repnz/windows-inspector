@@ -238,7 +238,16 @@ void OnProcessNotify(_Inout_ PEPROCESS ProcessObject, _In_ HANDLE ProcessId, _In
 }
 
 NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG Win32StartAddress) {
+	NTSTATUS status;
 	HANDLE CreatingThreadObjectHandle;
+	
+	PETHREAD thread;
+	status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &thread);
+
+	if (!NT_SUCCESS(status)) {
+		KdPrint(("Failed to find thread with id %d", ThreadId, status));
+		return status;
+	}
 
 	NTSTATUS status = ObOpenObjectByPointer(
 		PsGetCurrentThread(),
@@ -249,6 +258,8 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG Win32Start
 		KernelMode,
 		&CreatingThreadObjectHandle
 	);
+
+	ObDereferenceObject(thread);
 
 	if (!NT_SUCCESS(status)) {
 		KdPrintError("Failed to create a handle to the new thread", status);
@@ -265,6 +276,7 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG Win32Start
 
 	if (!NT_SUCCESS(status)) {
 		KdPrint(("Cannot query thread start address %d (0x%08X)\n", ThreadId, status));
+		ZwClose(CreatingThreadObjectHandle);
 		return status;
 	}
 
@@ -275,15 +287,15 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG Win32Start
 void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId) {
 	auto* newItem = Mem::Allocate<ListItem<ThreadCreateInfo>>();
 	ThreadCreateInfo& info = newItem->Item;
+	info.Size = sizeof(ThreadCreateInfo);
+	info.Type = ItemType::ThreadStart;
+	KeQuerySystemTimePrecise(&info.Time);
 
 	if (!NT_SUCCESS(GetThreadWin32StartAddress(TargetThreadId, &info.StartAddress))) {
 		ExFreePool(newItem);
 		return;
 	}
-
-	info.Size = sizeof(ThreadCreateInfo);
-	info.Type = ItemType::ThreadStart;
-	KeQuerySystemTimePrecise(&info.Time);
+	
 	info.CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
 	info.CreatingThreadId = HandleToUlong(PsGetCurrentThreadId());
 	info.NewThreadId = TargetThreadId;
