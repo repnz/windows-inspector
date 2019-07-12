@@ -6,6 +6,8 @@ The driver will intercept -
 - image load
 - file system operations
 - registry operations
+- networking events
+- process/thread handle callbacks
 
 This driver will block unwanted operations based on a very simple policy:
 
