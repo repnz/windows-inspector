@@ -24,6 +24,11 @@ NTSTATUS DefaultDispatch(
 	PDEVICE_OBJECT DeviceObject,
 	PIRP Irp);
 
+NTSTATUS DeviceIoControlDispatchWrapper(
+	_In_ PDEVICE_OBJECT DeviceObject, 
+	_Inout_ PIRP Irp
+);
+
 NTSTATUS DeviceIoControlDispatch(
 	_In_ PDEVICE_OBJECT DeviceObject,
 	_Inout_ PIRP Irp
@@ -174,6 +179,44 @@ NTSTATUS DefaultDispatch(
 
 #define INSPECTOR_GET_EVENTS_FUNCTION_CODE 0x1
 
+NTSTATUS DeviceIoControlDispatchWrapper(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp) {
+	__try {
+		return DeviceIoControlDispatch(DeviceObject, Irp);
+	} 
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		KdPrint(("Exception handling IOCTL: (0x%08X)\n", GetExceptionCode()));
+		return CompleteIrp(Irp, STATUS_ACCESS_VIOLATION);
+	}
+}
+
+NTSTATUS GetEventsHandler(_In_ PVOID UserModeBuffer, _In_ ULONG BufferSize, ULONG* BytesRead) {
+	if (BufferSize == NULL || BufferSize == 0 || BytesRead == NULL) {
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	*BytesRead = 0;
+
+	UserModeMapping mapping;
+
+	NTSTATUS status = UserModeMapping::Create(
+		UserModeBuffer,
+		BufferSize,
+		IoWriteAccess,
+		&mapping);
+
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
+
+	status = list.ReadIntoBuffer(mapping.Buffer, mapping.Length, BytesRead);
+
+	if (!NT_SUCCESS(status)) {
+		return status;
+	}
+
+	return status;
+}
+
 NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
 {	
 	UNREFERENCED_PARAMETER(DeviceObject);
@@ -187,46 +230,22 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 		return CompleteIrp(Irp, STATUS_INVALID_PARAMETER_1);
 	}
 
-
-	SIZE_T inBufLength = iosp->Parameters.DeviceIoControl.InputBufferLength;
-	SIZE_T outBufLength = iosp->Parameters.DeviceIoControl.OutputBufferLength;
-
-
 	switch (controlCode.Function) {
 	case INSPECTOR_GET_EVENTS_FUNCTION_CODE:
 	{
-		PVOID outBufUserMode = Irp->UserBuffer;
-
-		if (outBufUserMode == NULL || outBufLength == 0) {
-			return CompleteIrp(Irp, STATUS_INVALID_PARAMETER);
-		}
-
-		UserModeMapping mapping;
-
-		status = UserModeMapping::Create(
+		status = GetEventsHandler(
 			Irp->UserBuffer,
-			inBufLength,
-			IoWriteAccess,
-			&mapping);
-
-		if (!NT_SUCCESS(status)) {
-			return CompleteIrp(Irp, status);
-		}
-
-		ULONG itemsRead;
-		status = list.ReadIntoBuffer(mapping.Buffer, mapping.Length, &itemsRead);
-
-		if (!NT_SUCCESS(status)) {
-			return CompleteIrp(Irp, status);
-		}
-
-		return CompleteIrp(Irp, status, itemsRead);
+			iosp->Parameters.DeviceIoControl.InputBufferLength,
+			&Irp->IoStatus.Information
+		);
 	}
 	break;
 	default:
-		return CompleteIrp(Irp, STATUS_INVALID_PARAMETER);
+		status = STATUS_INVALID_PARAMETER;
 
 	};
+
+	return CompleteIrp(Irp, status);
 }
 
 
