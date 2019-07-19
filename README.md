@@ -1,4 +1,4 @@
-# inspector-driver
+# Windows Inspector
 
 This is a driver created to learn more about kernel programming, kernel callbacks and filesystem minifilters.
 The driver will intercept - 
