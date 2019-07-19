@@ -1,5 +1,5 @@
 #include "InspectorDriver.hpp"
-#include <exception>
+#include <stdexcept>
 
 InspectorDriver::InspectorDriver() {
 	hDriver = OwnedHandle(CreateFileA(
@@ -13,7 +13,7 @@ InspectorDriver::InspectorDriver() {
 	));
 
 	if (hDriver.get() == INVALID_HANDLE_VALUE) {
-		throw std::exception("Could not create handle to driver object");
+		throw std::runtime_error("Could not create handle to driver object");
 	}
 
 }
@@ -35,7 +35,7 @@ SIZE_T InspectorDriver::ReadEvents(PVOID buffer, SIZE_T length)
 		0,
 		&bytesReturned,
 		NULL)) {
-		throw std::exception("Some error communicating with the driver");
+		throw std::runtime_error("Some error communicating with the driver");
 	}
 
 	return bytesReturned;

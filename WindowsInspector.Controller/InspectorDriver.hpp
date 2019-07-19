@@ -20,6 +20,5 @@ public:
 	InspectorDriver();
 	InspectorDriver(OwnedHandle hDriver);
 
-
 	SIZE_T ReadEvents(PVOID buffer, SIZE_T length);
 };

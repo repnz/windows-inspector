@@ -30,7 +30,7 @@ void EventFormatter::dumpEvent(std::ostream& outputStream, const EventHeader* ev
 		DumpImageLoadEvent(outputStream, *(ImageLoadEvent*)event);
 		break;
 	default:
-		throw std::exception("Error! Buffer Has Problems!");
+		throw std::runtime_error("Error! Buffer Has Problems!");
 	}
 
 }

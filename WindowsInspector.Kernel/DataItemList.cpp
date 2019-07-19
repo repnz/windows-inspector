@@ -27,9 +27,9 @@ EventHeader& ToItemHeader(PLIST_ENTRY entry) {
 
 }
 
-NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* itemsRead)
+NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* bytesRead)
 {
-	*itemsRead = 0;
+	*bytesRead = 0;
 
     ScopedLock<FastMutex> scopedLock(_mutex);
 
@@ -43,7 +43,7 @@ NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* ite
         EventHeader& header = ToItemHeader(entry);
         RtlCopyMemory(buffer, &header, header.Size);
         bufferIndex += header.Size;
-		*itemsRead++;
+		*bytesRead = bufferIndex;
         ExFreePool(entry);
     } 
 
