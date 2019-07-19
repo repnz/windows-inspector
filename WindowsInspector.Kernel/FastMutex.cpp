@@ -1,4 +1,4 @@
-#include "FastMutex.h"
+#include "FastMutex.hpp"
 #include <ntddk.h>
 
 void FastMutex::Init() {

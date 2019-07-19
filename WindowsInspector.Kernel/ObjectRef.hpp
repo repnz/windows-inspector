@@ -4,7 +4,7 @@
 struct ObjectRef {
 	PVOID object;
 
-	ObjectRef(PVOID object) {
+	ObjectRef(PVOID object) : object(object){
 		ObReferenceObject(object);
 	}
 

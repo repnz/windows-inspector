@@ -1,6 +1,6 @@
 #pragma once
 #include <ntddk.h>
-#include "FastMutex.h"
+#include "FastMutex.hpp"
 
 template <typename T>
 struct ListItem {
@@ -14,7 +14,6 @@ private:
     FastMutex _mutex;
     ULONG _count;
     ULONG _max;
-
 public:
     void Init(ULONG max);
 
@@ -30,7 +29,7 @@ public:
 
     NTSTATUS PushItem(PLIST_ENTRY item);
 
-    NTSTATUS ReadIntoBuffer(PVOID buffer, ULONG bufferSize);
+    NTSTATUS ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* itemsRead);
     
     ULONG Count() const;
 

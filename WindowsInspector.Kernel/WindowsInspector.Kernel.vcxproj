@@ -156,21 +156,25 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -192,18 +196,23 @@
   <ItemGroup>
     <ClCompile Include="FastMutex.cpp" />
     <ClCompile Include="DataItemList.cpp" />
+    <ClCompile Include="KernelApi.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="UserModeMapping.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.h" />
-    <ClInclude Include="Error.h" />
-    <ClInclude Include="FastMutex.h" />
-    <ClInclude Include="DataItemList.h" />
-    <ClInclude Include="Functions.h" />
-    <ClInclude Include="Mem.h" />
-    <ClInclude Include="ObjectHandle.h" />
-    <ClInclude Include="ObjectRef.h" />
-    <ClInclude Include="ScopedLock.h" />
+    <ClInclude Include="Common.hpp" />
+    <ClInclude Include="cpptools.hpp" />
+    <ClInclude Include="DeviceIoControlCode.hpp" />
+    <ClInclude Include="Error.hpp" />
+    <ClInclude Include="FastMutex.hpp" />
+    <ClInclude Include="DataItemList.hpp" />
+    <ClInclude Include="KernelApi.hpp" />
+    <ClInclude Include="Mem.hpp" />
+    <ClInclude Include="UserModeMapping.hpp" />
+    <ClInclude Include="ObjectHandle.hpp" />
+    <ClInclude Include="ObjectRef.hpp" />
+    <ClInclude Include="ScopedLock.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

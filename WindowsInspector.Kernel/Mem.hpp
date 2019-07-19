@@ -2,7 +2,7 @@
 #include <ntddk.h>
 
 struct Mem {
-	const ULONG Tag = 'znpr';
+	static const ULONG Tag = 'znpr';
 
 	template <typename T>
 	static T* Allocate(SIZE_T Appendix = 0, POOL_TYPE pool = NonPagedPool) {

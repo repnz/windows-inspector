@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <memory>
+#include <WindowsInspector.Kernel/Common.hpp>
 
 struct HandleDeleter {
 	void operator()(HANDLE value) { 
@@ -20,5 +21,5 @@ public:
 	InspectorDriver(OwnedHandle hDriver);
 
 
-	void ReadEvents(PVOID buffer, SIZE_T length);
+	SIZE_T ReadEvents(PVOID buffer, SIZE_T length);
 };

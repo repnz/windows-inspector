@@ -33,33 +33,48 @@
     <ClCompile Include="DataItemList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UserModeMapping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KernelApi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.h">
+    <ClInclude Include="FastMutex.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FastMutex.h">
+    <ClInclude Include="Error.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ScopedLock.h">
+    <ClInclude Include="DeviceIoControlCode.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DataItemList.h">
+    <ClInclude Include="DataItemList.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Mem.h">
+    <ClInclude Include="Mem.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectRef.h">
+    <ClInclude Include="ObjectHandle.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Functions.h">
+    <ClInclude Include="ObjectRef.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ObjectHandle.h">
+    <ClInclude Include="ScopedLock.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Error.h">
+    <ClInclude Include="UserModeMapping.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cpptools.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KernelApi.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

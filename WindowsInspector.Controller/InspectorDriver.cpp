@@ -1,4 +1,4 @@
-#include "InspectorDriver.h"
+#include "InspectorDriver.hpp"
 #include <exception>
 
 InspectorDriver::InspectorDriver() {
@@ -21,6 +21,22 @@ InspectorDriver::InspectorDriver() {
 InspectorDriver::InspectorDriver(OwnedHandle hDriver) : hDriver(std::move(hDriver)){
 }
 
-void InspectorDriver::ReadEvents(PVOID buffer, SIZE_T length)
+SIZE_T InspectorDriver::ReadEvents(PVOID buffer, SIZE_T length)
 {
+	
+	DWORD bytesReturned;
+
+	if (!DeviceIoControl(
+		hDriver.get(),
+		INSPECTOR_GET_EVENTS_CTL_CODE,
+		buffer,
+		length,
+		NULL,
+		0,
+		&bytesReturned,
+		NULL)) {
+		throw std::exception("Some error communicating with the driver");
+	}
+
+	return bytesReturned;
 }

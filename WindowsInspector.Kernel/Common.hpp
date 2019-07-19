@@ -1,34 +1,44 @@
 #pragma once
-#include <ntddk.h>
 
-enum class ItemType : short {
+#ifdef KERNEL_DRIVER
+#include <ntddk.h>
+#else
+#include <windows.h>
+#include <winioctl.h>
+#define IM_ORI_DAMARI
+#endif
+
+#define INSPECTOR_GET_EVENTS_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+
+enum class EventType : short {
     None,
     ProcessCreate,
     ProcessExit,
 	ImageLoad,
-	ThreadStart,
+	ThreadCreate,
 	ThreadExit
 };
 
-struct ItemHeader {
-    ItemType Type;
+struct EventHeader {
+    EventType Type;
     USHORT Size;
     LARGE_INTEGER Time;
 };
 
-struct ProcessExitInfo : ItemHeader {
+struct ProcessExitEvent : EventHeader {
     ULONG ProcessId;
 };
 
-struct ProcessCreateInfo : ItemHeader {
+struct ProcessCreateEvent : EventHeader {
     ULONG NewProcessId;
     ULONG CreatingProcessId;
 	ULONG ParentProcessId;
     USHORT CommandLineLength;
-	USHORT CommandLine[1];
+	WCHAR CommandLine[1];
 };
 
-struct ThreadCreateInfo : ItemHeader {
+struct ThreadCreateEvent : EventHeader {
 	ULONG CreatingProcessId;
 	ULONG CreatingThreadId;
     ULONG NewThreadId;
@@ -36,12 +46,12 @@ struct ThreadCreateInfo : ItemHeader {
 	ULONG StartAddress;
 };
 
-struct ThreadExitInfo : ItemHeader {
+struct ThreadExitEvent : EventHeader {
 	ULONG ThreadId;
 	ULONG ProcessId;
 };
 
-struct ImageLoadInfo : ItemHeader {
+struct ImageLoadEvent : EventHeader {
     ULONG ProcessId;
 	ULONG ThreadId;
     ULONG LoadAddress;
