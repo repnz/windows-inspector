@@ -42,7 +42,7 @@ NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* byt
         }
         
         EventHeader& header = ToItemHeader(entry);
-        RtlCopyMemory(buffer, &header, header.Size);
+        RtlCopyMemory((PCHAR)buffer + bufferIndex, &header, header.Size);
         bufferIndex += header.Size;
 		*bytesRead = bufferIndex;
         ExFreePool(entry);
