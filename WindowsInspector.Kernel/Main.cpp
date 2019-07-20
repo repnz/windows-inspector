@@ -87,6 +87,8 @@ DriverEntry(
             break;
         }
         
+		linkCreated = true;
+
 #ifdef PROCESS_CALLBACK
 
 		KdPrintMessage("Registering Process Callbacks...");
@@ -125,6 +127,8 @@ DriverEntry(
             KdPrintError("Failed to create image load callback", status);
             break;
         }
+
+		imageCallback = true;
 #endif
 
 		DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatch;
