@@ -165,6 +165,8 @@ DriverEntry(
 
 
 void DriverUnload(PDRIVER_OBJECT DriverObject) {
+	list.Free();
+
 	// Remove callbacks
 	KdPrintMessage("DriverUnload");
 
