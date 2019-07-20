@@ -93,7 +93,7 @@ std::string WideToString(const WCHAR* lpString, ULONG uSize) {
 	std::string s(uSize, ' ');
 
 	for (ULONG i = 0; i < uSize; i++) {
-		s[i] = (char)lpString[i*2];
+		s[i] = (char)lpString[i];
 	}
 
 	return s;
