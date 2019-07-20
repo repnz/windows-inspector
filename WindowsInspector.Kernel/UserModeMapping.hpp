@@ -13,10 +13,10 @@ struct IoBuffer {
 struct UserModeMapping {
 	PMDL Mdl;
 	PVOID Buffer;
-	SIZE_T Length;
+	ULONG Length;
 
 
-	UserModeMapping(PVOID buffer, SIZE_T length, PMDL mdl) :
+	UserModeMapping(PVOID buffer, ULONG length, PMDL mdl) :
 		Mdl(mdl), Buffer(buffer), Length(length) {
 	}
 
@@ -45,7 +45,7 @@ struct UserModeMapping {
 
 	static NTSTATUS Create(
 		_In_ PVOID UserModeBuffer, 
-		_In_ SIZE_T Length, 
+		_In_ ULONG Length, 
 		_In_ LOCK_OPERATION IoOperation,
 		_Inout_ UserModeMapping* OutputMapping
 	);

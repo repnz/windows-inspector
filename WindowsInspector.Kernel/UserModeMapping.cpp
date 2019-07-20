@@ -15,9 +15,7 @@ NTSTATUS CheckBufferAccess(_In_ PVOID UserModeBuffer, _In_ ULONG Length, _In_ LO
 	{
 
 		NTSTATUS ntStatus = GetExceptionCode();
-		KdPrint((
-			DRIVER_PREFIX "Exception while accessing user mode buffer: 0X%08X\n",
-			ntStatus));
+		KdPrint((DRIVER_PREFIX "Exception while accessing user mode buffer: 0X%08X\n", ntStatus));
 
 		return ntStatus;
 	}
@@ -39,7 +37,7 @@ MapUserModeAddress(
 
 	if (mdl == NULL)
 	{
-		KdPrint((DRIVER_PREFIX "Failed to allocate MDL for buffer 0x%08X\n", (ULONG)Buffer));
+		KdPrint((DRIVER_PREFIX "Failed to allocate MDL for buffer 0x%p\n", Buffer));
 		return STATUS_INSUFFICIENT_RESOURCES;
 	}
 
@@ -52,7 +50,7 @@ MapUserModeAddress(
 	{
 
 		NTSTATUS ntStatus = GetExceptionCode();
-		KdPrint((DRIVER_PREFIX "Exception while locking buffer 0X%08X: 0x%08X\n", (ULONG)Buffer, ntStatus));
+		KdPrint((DRIVER_PREFIX "Exception while locking buffer 0x%p (0x%08X)\n", Buffer, ntStatus));
 		IoFreeMdl(mdl);
 		return ntStatus;
 	}
@@ -72,7 +70,7 @@ MapUserModeAddress(
 
 NTSTATUS UserModeMapping::Create(
 	_In_ PVOID UserModeBuffer,
-	_In_ SIZE_T Length, 
+	_In_ ULONG Length, 
 	_In_ LOCK_OPERATION IoOperation,
 	_Inout_ UserModeMapping* OutputMapping
 ) {
@@ -100,7 +98,7 @@ NTSTATUS UserModeMapping::Create(
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
 		NTSTATUS ntStatus = GetExceptionCode();
-		KdPrint(("Exception while locking buffer 0x%08X: 0x%08X\n", (ULONG)UserModeBuffer, ntStatus));
+		KdPrint((DRIVER_PREFIX "Exception while locking buffer 0x%p: 0x%08X\n", UserModeBuffer, ntStatus));
 		IoFreeMdl(mdl);
 		return ntStatus;
 	}

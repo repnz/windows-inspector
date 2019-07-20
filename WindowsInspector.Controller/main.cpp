@@ -16,12 +16,11 @@ void ControllerMain(const std::vector<std::string>& commandLineArguments) {
 	std::cout << "Starting the Windows Inspector Controller" << std::endl;
 	
 	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
-		std::string err = "Could not register Control-C Handler! " + std::to_string(GetLastError());
-		throw std::runtime_error(err.c_str());
+		throw std::runtime_error("Could not register a Control-C Handler! " + std::to_string(GetLastError()));
 	}
 
 	InspectorDriver driver;
-
+	
 	std::vector<BYTE> vec(MB);
 	BYTE* buffer = &vec[0];
 

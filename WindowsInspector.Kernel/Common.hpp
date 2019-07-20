@@ -43,7 +43,7 @@ struct ThreadCreateEvent : EventHeader {
 	ULONG CreatingThreadId;
     ULONG NewThreadId;
     ULONG TargetProcessId;
-	ULONG StartAddress;
+	ULONG_PTR StartAddress;
 };
 
 struct ThreadExitEvent : EventHeader {
@@ -54,7 +54,7 @@ struct ThreadExitEvent : EventHeader {
 struct ImageLoadEvent : EventHeader {
     ULONG ProcessId;
 	ULONG ThreadId;
-    ULONG LoadAddress;
+    ULONG_PTR LoadAddress;
     ULONG_PTR ImageSize;
 	ULONG ImageFileNameLength;
     WCHAR ImageFileName[1];

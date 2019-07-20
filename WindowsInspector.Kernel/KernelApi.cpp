@@ -1,5 +1,6 @@
 #pragma once
 #include <WindowsInspector.Kernel/KernelApi.hpp>
+#include "Error.hpp"
 
 ZwQueryInformationThreadFunc ZwQueryInformationThread;
 
