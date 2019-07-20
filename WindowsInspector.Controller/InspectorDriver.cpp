@@ -21,7 +21,7 @@ InspectorDriver::InspectorDriver() {
 InspectorDriver::InspectorDriver(OwnedHandle hDriver) : hDriver(std::move(hDriver)){
 }
 
-SIZE_T InspectorDriver::ReadEvents(PVOID buffer, SIZE_T length)
+DWORD InspectorDriver::ReadEvents(PVOID buffer, DWORD length)
 {
 	
 	DWORD bytesReturned;

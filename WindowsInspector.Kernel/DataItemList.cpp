@@ -6,6 +6,7 @@ void DataItemList::Init(ULONG max)
 {
     _max = max;
     InitializeListHead(&_head);
+	_mutex.Init();
 }
 
 NTSTATUS DataItemList::PushItem(PLIST_ENTRY entry)
@@ -45,6 +46,7 @@ NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* byt
         bufferIndex += header.Size;
 		*bytesRead = bufferIndex;
         ExFreePool(entry);
+		_count--;
     } 
 
     return STATUS_MORE_ENTRIES;

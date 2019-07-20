@@ -102,9 +102,10 @@ std::string WideToString(const WCHAR* lpString, ULONG uSize) {
 void DumpProcessCreateEvent(std::ostream& outputStream, const ProcessCreateEvent& e)
 {
 	DumpCommonInformation(outputStream, e, "ProcessCreate");
-
+	
 	outputStream <<
 		"CreatingProcessId=" << setw(5) << e.CreatingProcessId << columnSeperator <<
+		"CreatingThreadId=" << setw(5) << e.CreatingThreadId << columnSeperator <<
 		"ParentProcessId="   << setw(5) << e.ParentProcessId << columnSeperator <<
 		"NewProcessId="      << setw(5) << e.NewProcessId << columnSeperator <<
 		"CommandLine="       << WideToString(e.CommandLine, e.CommandLineLength) << columnSeperator <<

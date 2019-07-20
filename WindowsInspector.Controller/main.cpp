@@ -25,7 +25,7 @@ void ControllerMain(const std::vector<std::string>& commandLineArguments) {
 	BYTE* buffer = &vec[0];
 
 	while (Running) {
-		SIZE_T readBytes = driver.ReadEvents(buffer, vec.size());
+		SIZE_T readBytes = driver.ReadEvents(buffer, (DWORD)vec.size());
 		SIZE_T bufferIndex = 0;
 
 		while (bufferIndex < readBytes) {

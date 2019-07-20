@@ -74,7 +74,7 @@ NTSTATUS UserModeMapping::Create(
 	_In_ LOCK_OPERATION IoOperation,
 	_Inout_ UserModeMapping* OutputMapping
 ) {
-	if (UserModeBuffer || Length == 0 || OutputMapping == NULL) {
+	if (UserModeBuffer == NULL || Length == 0 || OutputMapping == NULL) {
 		return STATUS_INVALID_PARAMETER;
 	}
 
@@ -86,7 +86,7 @@ NTSTATUS UserModeMapping::Create(
 
 	PMDL mdl = IoAllocateMdl(UserModeBuffer, Length, FALSE, TRUE, NULL);
 
-	if (OutputMapping->Mdl == NULL) {
+	if (mdl == NULL) {
 		return STATUS_INSUFFICIENT_RESOURCES;
 	}
 

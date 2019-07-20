@@ -131,7 +131,7 @@ DriverEntry(
 		imageCallback = true;
 #endif
 
-		DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatch;
+		DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatchWrapper;
         DriverObject->MajorFunction[IRP_MJ_CREATE] = DefaultDispatch;
         DriverObject->MajorFunction[IRP_MJ_CLOSE] = DefaultDispatch;
         DriverObject->DriverUnload = DriverUnload;
@@ -250,6 +250,8 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 	UNREFERENCED_PARAMETER(DeviceObject);
 	NTSTATUS status;
 
+	Irp->IoStatus.Information = 0;
+	
 	PIO_STACK_LOCATION iosp = IoGetCurrentIrpStackLocation(Irp);
 	DeviceIoControlCode controlCode(iosp->Parameters.DeviceIoControl.IoControlCode);
 
@@ -263,7 +265,7 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 		ULONG bytesRead;
 
 		status = GetEventsHandler(
-			Irp->UserBuffer,
+			iosp->Parameters.DeviceIoControl.Type3InputBuffer,
 			iosp->Parameters.DeviceIoControl.InputBufferLength,
 			&bytesRead
 		);
@@ -276,7 +278,10 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 
 	};
 
-	return CompleteIrp(Irp, status);
+	
+	Irp->IoStatus.Status = status;
+	IoCompleteRequest(Irp, 0);
+	return status;
 }
 
 
@@ -313,7 +318,8 @@ void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO Create
 	KeQuerySystemTimePrecise(&info.Time);
 	info.NewProcessId = HandleToUlong(ProcessId);
 	info.ParentProcessId = HandleToUlong(CreateInfo->ParentProcessId);
-	info.CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
+	info.CreatingProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
+	info.CreatingThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
 	info.CommandLineLength = CreateInfo->CommandLine->Length / 2;
 	
 	RtlCopyMemory(

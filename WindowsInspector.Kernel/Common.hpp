@@ -34,6 +34,7 @@ struct ProcessCreateEvent : EventHeader {
     ULONG NewProcessId;
     ULONG CreatingProcessId;
 	ULONG ParentProcessId;
+	ULONG CreatingThreadId;
     USHORT CommandLineLength;
 	WCHAR CommandLine[1];
 };
