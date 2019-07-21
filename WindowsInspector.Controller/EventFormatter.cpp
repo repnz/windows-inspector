@@ -10,7 +10,7 @@ void DumpThreadExitEvent(std::ostream& outputStream, const ThreadExitEvent& e);
 void DumpImageLoadEvent(std::ostream& outputStream, const ImageLoadEvent& e);
 
 
-void EventFormatter::dumpEvent(std::ostream& outputStream, const EventHeader* event) {
+void EventFormatter::DumpEvent(std::ostream& outputStream, const EventHeader* event) {
 
 
 	switch (event->Type) {
@@ -35,10 +35,10 @@ void EventFormatter::dumpEvent(std::ostream& outputStream, const EventHeader* ev
 
 }
 
-std::string EventFormatter::toString(const EventHeader* header)
+std::string EventFormatter::ToString(const EventHeader* header)
 {
 	std::stringstream evt;
-	dumpEvent(evt, header);
+	DumpEvent(evt, header);
 	return evt.str();
 }
 

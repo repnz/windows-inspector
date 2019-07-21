@@ -30,7 +30,7 @@ void ControllerMain(const std::vector<std::string>& commandLineArguments) {
 
 		while (bufferIndex < readBytes) {
 			const EventHeader* event = (const EventHeader*)(buffer + bufferIndex);
-			EventFormatter::dumpEvent(std::cout, event);
+			EventFormatter::DumpEvent(std::cout, event);
 			bufferIndex += event->Size;
 		}
 

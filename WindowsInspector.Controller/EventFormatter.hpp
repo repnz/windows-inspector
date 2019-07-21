@@ -4,6 +4,6 @@
 
 class EventFormatter {
 public:
-	static void dumpEvent(std::ostream& outputStream, const EventHeader* header);
-	static std::string toString(const EventHeader* header);
+	static void DumpEvent(std::ostream& outputStream, const EventHeader* header);
+	static std::string ToString(const EventHeader* header);
 };
