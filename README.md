@@ -1,6 +1,7 @@
 # Windows Inspector
+This is a driver created to learn more about kernel programming, kernel callbacks and filesystem minifilters. 
+Allows the user to hook many events and set some security policies.
 
-This is a driver created to learn more about kernel programming, kernel callbacks and filesystem minifilters.
 The driver will intercept - 
 - process creation
 - image load
@@ -11,8 +12,8 @@ The driver will intercept -
 
 This driver will block unwanted operations based on a very simple policy:
 
-- Child process blacklists
-- File operations on some files
+- child process blacklists
+- file operations on some files
 - registry operations
 
 The driver will kill the unwanted process before the operation has been done. 
