@@ -11,8 +11,8 @@
 #include "cpptools.hpp"
 
 #define PROCESS_CALLBACK TRUE
-//#define THREAD_CALLBACK  TRUE
-//#define IMAGE_CALLBACK   TRUE
+#define THREAD_CALLBACK  TRUE
+#define IMAGE_CALLBACK   TRUE
 
 void OnProcessNotify(_Inout_ PEPROCESS, _In_ HANDLE ProcessId, _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo);
 void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create);
@@ -390,17 +390,13 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 		return status;
 	}
 
-	ULONG win32StartAddressValue;
-
 	status = ZwQueryInformationThread(
 		CreatingThreadObjectHandle,
 		ThreadQuerySetWin32StartAddress,
-		&win32StartAddressValue,
-		sizeof(ULONG),
+		Win32StartAddress,
+		sizeof(ULONG_PTR),
 		NULL
 	);
-
-	*Win32StartAddress = win32StartAddressValue;
 
 	if (!NT_SUCCESS(status)) {
 		KdPrint((DRIVER_PREFIX "Cannot query thread start address %d (0x%08X)\n", ThreadId, status));
