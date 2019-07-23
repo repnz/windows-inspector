@@ -9,8 +9,6 @@
 #include <WindowsInspector.Controller\WindowsInspectorController.h>
 
 
-volatile BOOL Running = TRUE;
-
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
 void ListenCommand(args::Subparser& parser);
 
