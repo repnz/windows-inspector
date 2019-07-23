@@ -1,13 +1,17 @@
 #include "UserModeMapping.hpp"
 #include "Error.hpp"
 
-NTSTATUS CheckBufferAccess(_In_ PVOID UserModeBuffer, _In_ ULONG Length, _In_ LOCK_OPERATION Operation) {
+NTSTATUS CheckBufferAccess(_In_ PVOID UserModeBuffer, _In_ ULONG Length, _In_ LOCK_OPERATION Operation) 
+{
 
-	__try {
-		if (Operation == IoReadAccess) {
+	__try 
+	{
+		if (Operation == IoReadAccess)
+		{
 			ProbeForRead(UserModeBuffer, Length, sizeof(UCHAR));
 		} 
-		else {
+		else
+		{
 			ProbeForWrite(UserModeBuffer, Length, sizeof(UCHAR));
 		}
 	}
@@ -26,10 +30,10 @@ NTSTATUS CheckBufferAccess(_In_ PVOID UserModeBuffer, _In_ ULONG Length, _In_ LO
 
 NTSTATUS
 MapUserModeAddress(
-	_In_ PVOID Buffer,
-	_In_ ULONG Length,
-	_In_ LOCK_OPERATION Operation,
-	_Out_ PMDL* OutputMdl,
+	_In_ PVOID Buffer, 
+	_In_ ULONG Length, 
+	_In_ LOCK_OPERATION Operation, 
+	_Out_ PMDL* OutputMdl, 
 	_Out_ PCHAR* MappedBuffer
 ) {
 
@@ -57,7 +61,8 @@ MapUserModeAddress(
 
 	PCHAR buffer = (PCHAR)MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute);
 
-	if (!buffer) {
+	if (!buffer) 
+	{
 		IoFreeMdl(mdl);
 		STATUS_INSUFFICIENT_RESOURCES;
 	}
@@ -74,25 +79,27 @@ NTSTATUS UserModeMapping::Create(
 	_In_ LOCK_OPERATION IoOperation,
 	_Inout_ UserModeMapping* OutputMapping
 ) {
-	if (UserModeBuffer == NULL || Length == 0 || OutputMapping == NULL) {
+	if (UserModeBuffer == NULL || Length == 0 || OutputMapping == NULL)
+	{
 		return STATUS_INVALID_PARAMETER;
 	}
 
 	NTSTATUS status = CheckBufferAccess(UserModeBuffer, Length, IoOperation);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status)) 
+	{
 		return status;
 	}
 
 	PMDL mdl = IoAllocateMdl(UserModeBuffer, Length, FALSE, TRUE, NULL);
 
-	if (mdl == NULL) {
+	if (mdl == NULL)
+	{
 		return STATUS_INSUFFICIENT_RESOURCES;
 	}
 
 	__try
 	{
-
 		MmProbeAndLockPages(mdl, UserMode, IoOperation);
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
@@ -105,7 +112,8 @@ NTSTATUS UserModeMapping::Create(
 
 	PCHAR kernelBuffer = (PCHAR)MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute);
 
-	if (kernelBuffer == NULL) {
+	if (kernelBuffer == NULL) 
+	{
 		IoFreeMdl(mdl);
 		return STATUS_INSUFFICIENT_RESOURCES;
 	}
@@ -118,8 +126,10 @@ NTSTATUS UserModeMapping::Create(
 }
 
 
-UserModeMapping::~UserModeMapping() {
-	if (Mdl != NULL) {
+UserModeMapping::~UserModeMapping() 
+{
+	if (Mdl != NULL) 
+	{
 		IoFreeMdl(Mdl);
 		MmUnlockPages(Mdl);
 	}

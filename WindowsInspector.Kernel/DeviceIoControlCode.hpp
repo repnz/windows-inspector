@@ -6,13 +6,15 @@
 #define METHOD_FROM_CTL_CODE(ctrlCode) ((ULONG)(ctrlCode & 3))
 
 
-struct DeviceIoControlCode {
+struct DeviceIoControlCode 
+{
 	UCHAR Method : 2;
 	USHORT Function : 12;
 	UCHAR Access : 2;
 	USHORT DeviceType : 16;
 
-	DeviceIoControlCode(ULONG Code) {
+	DeviceIoControlCode(ULONG Code) 
+	{
 		Method = METHOD_FROM_CTL_CODE(Code);
 		Function = FUNCTION_FROM_CTL_CODE(Code);
 		Access = ACCESS_FROM_CTL_CODE(Code);
@@ -20,7 +22,8 @@ struct DeviceIoControlCode {
 	}
 
 
-	ULONG ReconstructCode() const {
+	ULONG ReconstructCode() const 
+	{
 		return ((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method);
 	}
 };

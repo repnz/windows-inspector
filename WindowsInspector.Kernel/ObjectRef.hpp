@@ -1,14 +1,17 @@
 #pragma once
 #include <ntddk.h>
 
-struct ObjectRef {
+struct ObjectRef 
+{
 	PVOID object;
 
-	ObjectRef(PVOID object) : object(object){
+	ObjectRef(PVOID object) 
+	{
 		ObReferenceObject(object);
 	}
 
-	~ObjectRef() {
+	~ObjectRef() 
+	{
 		ObDereferenceObject(object);
 	}
 };

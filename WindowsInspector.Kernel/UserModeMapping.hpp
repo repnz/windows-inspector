@@ -1,7 +1,8 @@
 #pragma once
 #include <ntddk.h>
 
-struct IoBuffer {
+struct IoBuffer 
+{
 	PCHAR Buffer;
 	ULONG Length;
 
@@ -10,22 +11,26 @@ struct IoBuffer {
 };
 
 
-struct UserModeMapping {
+struct UserModeMapping 
+{
 	PMDL Mdl;
 	PVOID Buffer;
 	ULONG Length;
 
 
 	UserModeMapping(PVOID buffer, ULONG length, PMDL mdl) :
-		Mdl(mdl), Buffer(buffer), Length(length) {
+		Mdl(mdl), Buffer(buffer), Length(length) 
+	{
 	}
 
 	UserModeMapping()
-		: Mdl(NULL), Buffer(NULL), Length(0) {
+		: Mdl(NULL), Buffer(NULL), Length(0) 
+	{
 	}
 
 	UserModeMapping(UserModeMapping&& list) :
-		Mdl(list.Mdl), Buffer(list.Buffer), Length(list.Length){
+		Mdl(list.Mdl), Buffer(list.Buffer), Length(list.Length)
+	{
 		
 		list.Mdl = NULL;
 		list.Buffer = NULL;
@@ -39,7 +44,8 @@ struct UserModeMapping {
 	UserModeMapping(const UserModeMapping&) = delete;
 	UserModeMapping& operator=(const UserModeMapping&) = delete;
 
-	bool IsValid() const {
+	bool IsValid() const 
+	{
 		return Buffer != NULL && Length != 0 && Mdl != NULL;
 	}
 

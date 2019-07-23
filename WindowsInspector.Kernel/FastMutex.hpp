@@ -1,7 +1,8 @@
 #pragma once
 #include <ntddk.h>
 
-struct FastMutex {
+struct FastMutex 
+{
 public:
     void Init();
 

@@ -20,151 +20,155 @@ void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE Proce
 
 DataItemList list;
 
-NTSTATUS DefaultDispatch(
-	PDEVICE_OBJECT DeviceObject,
-	PIRP Irp);
+NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
 
-NTSTATUS DeviceIoControlDispatchWrapper(
-	_In_ PDEVICE_OBJECT DeviceObject, 
-	_Inout_ PIRP Irp
-);
+NTSTATUS DeviceIoControlDispatchWrapper(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
 
-NTSTATUS DeviceIoControlDispatch(
-	_In_ PDEVICE_OBJECT DeviceObject,
-	_Inout_ PIRP Irp
-);
+NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
 
-void DriverUnload(PDRIVER_OBJECT DriverObject);
+void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
 
-extern "C" NTSTATUS
-DriverEntry(
-    _In_ PDRIVER_OBJECT DriverObject,
-    _In_ PUNICODE_STRING RegistryPath
-) {
+
+extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath) {
 
 	KdPrintMessage("DriverEntry");
 
-    UNREFERENCED_PARAMETER(DriverObject);
-    UNREFERENCED_PARAMETER(RegistryPath);
-    
+	UNREFERENCED_PARAMETER(DriverObject);
+	UNREFERENCED_PARAMETER(RegistryPath);
+
 	KdPrint((DRIVER_PREFIX "Initializing Kernel API...\n"));
 
-	if (!KernelApiInitialize()) {
+	if (!KernelApiInitialize()) 
+	{
 		KdPrintMessage("Could not initialize kernel API");
 		return STATUS_INVALID_ADDRESS;
 	}
 
-    list.Init(500);
+	list.Init(500);
 
-    PDEVICE_OBJECT deviceObject = nullptr;
-    NTSTATUS status = STATUS_SUCCESS;
+	PDEVICE_OBJECT deviceObject = nullptr;
+	NTSTATUS status = STATUS_SUCCESS;
 
-    // Variables needed for cleaning
-    bool linkCreated = false;
-    bool processCallback = false;
-    bool threadCallback = false;
-    bool imageCallback = false;
+	// Variables needed for cleaning
+	bool linkCreated = false;
+	bool processCallback = false;
+	bool threadCallback = false;
+	bool imageCallback = false;
 
-    UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
-    UNICODE_STRING devName = RTL_CONSTANT_STRING(L"\\Device\\WindowsInspector");
+	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
+	UNICODE_STRING devName = RTL_CONSTANT_STRING(L"\\Device\\WindowsInspector");
 
-    do {
+	do 
+	{
 		KdPrintMessage("Creating Device...");
-        status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &deviceObject);
+		status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &deviceObject);
 
-        if (!NT_SUCCESS(status)) {
+		if (!NT_SUCCESS(status))
+		{
 			KdPrintError("Failed to create device", status);
-            break;
-        }
-        
-        
+			break;
+		}
+
+
 		KdPrintMessage("Creating Symbolic Link..");
 
-        status = IoCreateSymbolicLink(&symLink, &devName);
+		status = IoCreateSymbolicLink(&symLink, &devName);
 
-        if (!NT_SUCCESS(status)) {
-            KdPrintError("Failed to create symbolic link", status);
-            break;
-        }
-        
+		if (!NT_SUCCESS(status))
+		{
+			KdPrintError("Failed to create symbolic link", status);
+			break;
+		}
+
 		linkCreated = true;
 
 #ifdef PROCESS_CALLBACK
 
 		KdPrintMessage("Registering Process Callbacks...");
 
-        status = PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, FALSE);
+		status = PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, FALSE);
 
-        if (!NT_SUCCESS(status)) {
-            KdPrintError("Failed to register process callback", status);
-            break;
-        }
+		if (!NT_SUCCESS(status))
+		{
+			KdPrintError("Failed to register process callback", status);
+			break;
+		}
 
-        processCallback = true;
+		processCallback = true;
 #endif
 
 #ifdef THREAD_CALLBACK
 
 		KdPrintMessage("Registering Thread Callbacks...");
 
-        status = PsSetCreateThreadNotifyRoutine(OnThreadNotify);
+		status = PsSetCreateThreadNotifyRoutine(OnThreadNotify);
 
-        if (!NT_SUCCESS(status)) {
-            KdPrintError("Failed to create thread creation callback", status);
-            break;
-        }
+		if (!NT_SUCCESS(status))
+		{
+			KdPrintError("Failed to create thread creation callback", status);
+			break;
+		}
 
-        threadCallback = true;
+		threadCallback = true;
 #endif
 
 #ifdef IMAGE_CALLBACK
 
 		KdPrintMessage("Registering Image Callbacks");
 
-        status = PsSetLoadImageNotifyRoutine(OnImageLoadNotify);
+		status = PsSetLoadImageNotifyRoutine(OnImageLoadNotify);
 
-        if (!NT_SUCCESS(status)) {
-            KdPrintError("Failed to create image load callback", status);
-            break;
-        }
+		if (!NT_SUCCESS(status)) 
+		{
+			KdPrintError("Failed to create image load callback", status);
+			break;
+		}
 
 		imageCallback = true;
 #endif
 
 		DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatchWrapper;
-        DriverObject->MajorFunction[IRP_MJ_CREATE] = DefaultDispatch;
-        DriverObject->MajorFunction[IRP_MJ_CLOSE] = DefaultDispatch;
-        DriverObject->DriverUnload = DriverUnload;
+		DriverObject->MajorFunction[IRP_MJ_CREATE] = DefaultDispatch;
+		DriverObject->MajorFunction[IRP_MJ_CLOSE] = DefaultDispatch;
+		DriverObject->DriverUnload = DriverUnload;
 
-    } while (false);
-    
-    if (!NT_SUCCESS(status)) {
-        if (imageCallback) {
-            PsRemoveLoadImageNotifyRoutine(OnImageLoadNotify);
-        }
+	} 
+	while (false);
 
-        if (threadCallback) {
-            PsRemoveCreateThreadNotifyRoutine(OnThreadNotify);
-        }
+	if (!NT_SUCCESS(status)) 
+	{
+		if (imageCallback)
+		{
+			PsRemoveLoadImageNotifyRoutine(OnImageLoadNotify);
+		}
 
-        if (processCallback) {
-            PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, TRUE);
-        }
+		if (threadCallback)
+		{
+			PsRemoveCreateThreadNotifyRoutine(OnThreadNotify);
+		}
 
-        if (linkCreated) {
-            IoDeleteSymbolicLink(&symLink);
-        }
+		if (processCallback)
+		{
+			PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, TRUE);
+		}
 
-        if (deviceObject != nullptr) {
-            IoDeleteDevice(deviceObject);
-        }
-    }
-    
-    return status;
+		if (linkCreated) 
+		{
+			IoDeleteSymbolicLink(&symLink);
+		}
+
+		if (deviceObject != nullptr) 
+		{
+			IoDeleteDevice(deviceObject);
+		}
+	}
+
+	return status;
 }
 
 
-void DriverUnload(PDRIVER_OBJECT DriverObject) {
+void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
+{
 	list.Free();
 
 	// Remove callbacks
@@ -188,38 +192,42 @@ void DriverUnload(PDRIVER_OBJECT DriverObject) {
 	IoDeleteDevice(DriverObject->DeviceObject);
 }
 
-NTSTATUS CompleteIrp(PIRP Irp, NTSTATUS status = STATUS_SUCCESS, ULONG_PTR info = 0) {
-    Irp->IoStatus.Status = status;
-    Irp->IoStatus.Information = info;
-    IoCompleteRequest(Irp, 0);
-    return status;
+NTSTATUS CompleteIrp(PIRP Irp, NTSTATUS status = STATUS_SUCCESS, ULONG_PTR info = 0) 
+{
+	Irp->IoStatus.Status = status;
+	Irp->IoStatus.Information = info;
+	IoCompleteRequest(Irp, 0);
+	return status;
 }
 
-NTSTATUS DefaultDispatch(
-    PDEVICE_OBJECT DeviceObject,
-    PIRP Irp
-) {
+NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
+{
 	UNREFERENCED_PARAMETER(DeviceObject);
 
-    return CompleteIrp(Irp, STATUS_SUCCESS);
+	return CompleteIrp(Irp, STATUS_SUCCESS);
 }
 
 
 #define INSPECTOR_GET_EVENTS_FUNCTION_CODE 0x1
 
-NTSTATUS DeviceIoControlDispatchWrapper(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp) {
-	__try {
+NTSTATUS DeviceIoControlDispatchWrapper(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp) 
+{
+	__try 
+	{
 		return DeviceIoControlDispatch(DeviceObject, Irp);
-	} 
-	__except (EXCEPTION_EXECUTE_HANDLER) {
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER) 
+	{
 		KdPrint((DRIVER_PREFIX "Exception handling IOCTL: (0x%08X)\n", GetExceptionCode()));
 		return CompleteIrp(Irp, STATUS_ACCESS_VIOLATION);
 	}
 }
 
-NTSTATUS GetEventsHandler(_In_ PVOID UserModeBuffer, _In_ ULONG BufferSize, ULONG* BytesRead) {
+NTSTATUS GetEventsHandler(_In_ PVOID UserModeBuffer, _In_ ULONG BufferSize, ULONG* BytesRead) 
+{
 
-	if (BufferSize == NULL || BufferSize == 0 || BytesRead == NULL) {
+	if (BufferSize == NULL || BufferSize == 0 || BytesRead == NULL) 
+	{
 		return STATUS_INVALID_PARAMETER;
 	}
 
@@ -233,13 +241,15 @@ NTSTATUS GetEventsHandler(_In_ PVOID UserModeBuffer, _In_ ULONG BufferSize, ULON
 		IoWriteAccess,
 		&mapping);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status)) 
+	{
 		return status;
 	}
 
 	status = list.ReadIntoBuffer(mapping.Buffer, mapping.Length, BytesRead);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status))
+	{
 		KdPrintError("Could not read entries into buffer", status);
 		return status;
 	}
@@ -248,20 +258,22 @@ NTSTATUS GetEventsHandler(_In_ PVOID UserModeBuffer, _In_ ULONG BufferSize, ULON
 }
 
 NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
-{	
+{
 	UNREFERENCED_PARAMETER(DeviceObject);
 	NTSTATUS status;
 
 	Irp->IoStatus.Information = 0;
-	
+
 	PIO_STACK_LOCATION iosp = IoGetCurrentIrpStackLocation(Irp);
 	DeviceIoControlCode controlCode(iosp->Parameters.DeviceIoControl.IoControlCode);
 
-	if (controlCode.Method != METHOD_NEITHER || controlCode.DeviceType != FILE_DEVICE_UNKNOWN) {
+	if (controlCode.Method != METHOD_NEITHER || controlCode.DeviceType != FILE_DEVICE_UNKNOWN) 
+	{
 		return CompleteIrp(Irp, STATUS_INVALID_PARAMETER_1);
 	}
 
-	switch (controlCode.Function) {
+	switch (controlCode.Function) 
+	{
 	case INSPECTOR_GET_EVENTS_FUNCTION_CODE:
 	{
 		ULONG bytesRead;
@@ -271,7 +283,7 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 			iosp->Parameters.DeviceIoControl.InputBufferLength,
 			&bytesRead
 		);
-		
+
 		Irp->IoStatus.Information = bytesRead;
 	}
 	break;
@@ -280,18 +292,20 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 
 	};
 
-	
+
 	Irp->IoStatus.Status = status;
 	IoCompleteRequest(Irp, 0);
 	return status;
 }
 
 
-NTSTATUS InsertIntoList(PLIST_ENTRY listItem, EventType itemType) {
+NTSTATUS InsertIntoList(PLIST_ENTRY listItem, EventType itemType)
+{
 	UNREFERENCED_PARAMETER(itemType);
 	NTSTATUS status = list.PushItem(listItem);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status)) 
+	{
 		KdPrint((DRIVER_PREFIX "Cannot insert item of type %d into the list (0x%08X)\n", (ULONG)itemType, status));
 		ExFreePool(listItem);
 		return status;
@@ -301,15 +315,18 @@ NTSTATUS InsertIntoList(PLIST_ENTRY listItem, EventType itemType) {
 }
 
 
-void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO CreateInfo) {
-	if (CreateInfo->CommandLine == NULL) {
+void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO CreateInfo)
+{
+	if (CreateInfo->CommandLine == NULL) 
+	{
 		KdPrintMessage("Failed to log ProcessCreateInfo: CommandLine is NULL");
 		return;
 	}
-	
+
 	auto* newItem = Mem::Allocate<ListItem<ProcessCreateEvent>>(CreateInfo->CommandLine->Length);
 
-	if (newItem == NULL) {
+	if (newItem == NULL) 
+	{
 		KdPrintMessage("Failed to allocate memory for ProcessCreateInfo");
 		return;
 	}
@@ -323,20 +340,22 @@ void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO Create
 	info.CreatingProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
 	info.CreatingThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
 	info.CommandLineLength = CreateInfo->CommandLine->Length / 2;
-	
+
 	RtlCopyMemory(
 		info.CommandLine,
-		CreateInfo->CommandLine->Buffer, 
+		CreateInfo->CommandLine->Buffer,
 		CreateInfo->CommandLine->Length
 	);
 
 	InsertIntoList(&newItem->Entry, info.Type);
 }
 
-void OnProcessExit( _In_ HANDLE ProcessId) {
+void OnProcessExit(_In_ HANDLE ProcessId)
+{
 	auto* newItem = Mem::Allocate<ListItem<ProcessExitEvent>>();
 
-	if (newItem == NULL) {
+	if (newItem == NULL)
+	{
 		KdPrintMessage("Failed to allocate memory for ProcessExitInfo");
 		return;
 	}
@@ -346,29 +365,34 @@ void OnProcessExit( _In_ HANDLE ProcessId) {
 	info.Size = sizeof(ProcessExitEvent);
 	KeQuerySystemTimePrecise(&info.Time);
 	info.ProcessId = HandleToUlong(ProcessId);
-	
+
 	InsertIntoList(&newItem->Entry, EventType::ProcessExit);
 }
 
-void OnProcessNotify(_Inout_ PEPROCESS ProcessObject, _In_ HANDLE ProcessId, _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo) {
+void OnProcessNotify(_Inout_ PEPROCESS ProcessObject, _In_ HANDLE ProcessId, _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
+{
 	UNREFERENCED_PARAMETER(ProcessObject);
 
-    if (CreateInfo) {
+	if (CreateInfo)
+	{
 		OnProcessStart(ProcessId, CreateInfo);
-    }
-    else {
+	}
+	else 
+	{
 		OnProcessExit(ProcessId);
-    }
+	}
 }
 
-NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32StartAddress) {
+NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32StartAddress)
+{
 	NTSTATUS status;
 	HANDLE CreatingThreadObjectHandle;
-	
+
 	PETHREAD thread;
 	status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &thread);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status)) 
+	{
 		KdPrint((DRIVER_PREFIX "Failed to find thread with id %d (0x%08X)\n", ThreadId, status));
 		return status;
 	}
@@ -385,7 +409,8 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 
 	ObDereferenceObject(thread);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status))
+	{
 		KdPrintError("Failed to create a handle to the new thread", status);
 		return status;
 	}
@@ -398,7 +423,8 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 		NULL
 	);
 
-	if (!NT_SUCCESS(status)) {
+	if (!NT_SUCCESS(status))
+	{
 		KdPrint((DRIVER_PREFIX "Cannot query thread start address %d (0x%08X)\n", ThreadId, status));
 		ZwClose(CreatingThreadObjectHandle);
 		return status;
@@ -408,10 +434,12 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 	return STATUS_SUCCESS;
 }
 
-void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId) {
+void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId)
+{
 	auto* newItem = Mem::Allocate<ListItem<ThreadCreateEvent>>();
 
-	if (newItem == nullptr) {
+	if (newItem == nullptr) 
+	{
 		KdPrintMessage("Could not allocate thread start information");
 		return;
 	}
@@ -421,11 +449,12 @@ void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId) {
 	info.Type = EventType::ThreadCreate;
 	KeQuerySystemTimePrecise(&info.Time);
 
-	if (!NT_SUCCESS(GetThreadWin32StartAddress(TargetThreadId, &info.StartAddress))) {
+	if (!NT_SUCCESS(GetThreadWin32StartAddress(TargetThreadId, &info.StartAddress))) 
+	{
 		ExFreePool(newItem);
 		return;
 	}
-	
+
 	info.CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
 	info.CreatingThreadId = HandleToUlong(PsGetCurrentThreadId());
 	info.NewThreadId = TargetThreadId;
@@ -435,10 +464,12 @@ void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId) {
 }
 
 
-void OnThreadExit(_In_ ULONG ProcessId, _In_ ULONG ThreadId) {
+void OnThreadExit(_In_ ULONG ProcessId, _In_ ULONG ThreadId) 
+{
 	auto* newItem = Mem::Allocate<ListItem<ThreadExitEvent>>();
 
-	if (newItem == nullptr) {
+	if (newItem == nullptr)
+	{
 		KdPrintMessage("Could not allocate thread exit information");
 		return;
 	}
@@ -454,42 +485,49 @@ void OnThreadExit(_In_ ULONG ProcessId, _In_ ULONG ThreadId) {
 	InsertIntoList(&newItem->Entry, EventType::ThreadExit);
 }
 
-void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create) {
+void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create) 
+{
 
-	if (Create) {
+	if (Create) 
+	{
 		OnThreadStart(HandleToUlong(ProcessId), HandleToUlong(ThreadId));
 	}
-    else {
+	else 
+	{
 		OnThreadExit(HandleToUlong(ProcessId), HandleToUlong(ThreadId));
-    }
+	}
 
 }
 
 const WCHAR Unknown[] = L"(Unknown)";
 ULONG UnknownSize = sizeof(Unknown);
 
-void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo) {
+void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo) 
+{
 	ULONG fullImageNameLen = 0;
 	PCWSTR fullImageName;
 
-	if (FullImageName) {
+	if (FullImageName)
+	{
 		fullImageName = FullImageName->Buffer;
 		fullImageNameLen = FullImageName->Length;
 	}
-	else {
+	else 
+	{
 		fullImageName = Unknown;
 		fullImageNameLen = UnknownSize;
 	}
 
 	auto* newItem = Mem::Allocate<ListItem<ImageLoadEvent>>(fullImageNameLen);
 
-	if (newItem == NULL) {
+	if (newItem == NULL)
+	{
 		KdPrintMessage("Could not allocate load image info");
 		return;
 	}
 
 	ImageLoadEvent& info = newItem->Item;
-	
+
 	RtlCopyMemory(info.ImageFileName, fullImageName, fullImageNameLen);
 	info.ImageFileNameLength = fullImageNameLen / 2;
 	info.ImageSize = ImageInfo->ImageSize;
@@ -501,5 +539,5 @@ void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE Proce
 	KeQuerySystemTimePrecise(&info.Time);
 
 	InsertIntoList(&newItem->Entry, EventType::ImageLoad);
-	
+
 }

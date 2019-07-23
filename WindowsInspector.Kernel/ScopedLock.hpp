@@ -1,14 +1,17 @@
 #pragma once
 
 template <typename T>
-struct ScopedLock {
+struct ScopedLock 
+{
 	T& item;
 
-    ScopedLock(T& item) : item(item) {
+    ScopedLock(T& item) : item(item) 
+	{
         item.Lock();
     }
 
-    ~ScopedLock() {
+    ~ScopedLock() 
+	{
         item.Unlock();
     }
 };

@@ -3,12 +3,14 @@
 #include "FastMutex.hpp"
 
 template <typename T>
-struct ListItem {
+struct ListItem 
+{
     LIST_ENTRY Entry;
     T Item;
 };
 
-struct DataItemList {
+struct DataItemList
+{
 private:
     LIST_ENTRY _head;
     FastMutex _mutex;
@@ -18,12 +20,14 @@ public:
     void Init(ULONG max);
 
 	template <typename T>
-	NTSTATUS PushItem(ListItem<T>& item) {
+	NTSTATUS PushItem(ListItem<T>& item)
+	{
 		PushItem(&item->Entry);
 	}
 
 	template <typename T>
-	NTSTATUS PushItem(ListItem<T>* item) {
+	NTSTATUS PushItem(ListItem<T>* item) 
+	{
 		return PushItem(&item->Entry);
 	}
 

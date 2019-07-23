@@ -3,9 +3,12 @@
 #include <memory>
 #include <WindowsInspector.Kernel/Common.hpp>
 
-struct HandleDeleter {
-	void operator()(HANDLE value) { 
-		if (value != NULL && value != INVALID_HANDLE_VALUE) {
+struct HandleDeleter 
+{
+	void operator()(HANDLE value) 
+	{ 
+		if (value != NULL && value != INVALID_HANDLE_VALUE) 
+		{
 			CloseHandle(value);
 		}
 	}
@@ -13,7 +16,8 @@ struct HandleDeleter {
 
 using OwnedHandle = std::unique_ptr<std::remove_pointer<HANDLE>::type, HandleDeleter>;
 
-class InspectorDriver {
+class InspectorDriver 
+{
 	OwnedHandle hDriver;
 public:
 

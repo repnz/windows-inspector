@@ -13,7 +13,8 @@ NTSTATUS DataItemList::PushItem(PLIST_ENTRY entry)
 {
     ScopedLock<FastMutex> scopedLock(_mutex);
 
-    if (_count == _max) {
+    if (_count == _max) 
+	{
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
@@ -22,7 +23,8 @@ NTSTATUS DataItemList::PushItem(PLIST_ENTRY entry)
 	return STATUS_SUCCESS;
 }
 
-EventHeader& ToItemHeader(PLIST_ENTRY entry) {
+EventHeader& ToItemHeader(PLIST_ENTRY entry)
+{
     ListItem<EventHeader>* Header = CONTAINING_RECORD(entry, ListItem<EventHeader>, Entry);
     return Header->Item;
 
@@ -34,10 +36,12 @@ NTSTATUS DataItemList::ReadIntoBuffer(PVOID buffer, ULONG bufferSize, ULONG* byt
 
     ScopedLock<FastMutex> scopedLock(_mutex);
 
-    for (ULONG bufferIndex=0; bufferIndex<bufferSize;){
+    for (ULONG bufferIndex=0; bufferIndex<bufferSize;)
+	{
         PLIST_ENTRY entry = RemoveHeadList(&_head);
 
-        if (entry == &_head) {
+        if (entry == &_head) 
+		{
             return STATUS_SUCCESS;
         }
         
@@ -61,10 +65,12 @@ void DataItemList::Free()
 {
     ScopedLock<FastMutex> scopedLock(_mutex);
     	
-	while (true){
+	while (true)
+	{
 		PLIST_ENTRY entry = RemoveHeadList(&_head);
 
-		if (entry == &_head) {
+		if (entry == &_head)
+		{
 			break;
 		}
 

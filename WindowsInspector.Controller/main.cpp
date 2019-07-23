@@ -35,7 +35,8 @@ int main(int argc, const char** argv)
 	{
 		std::cout << parser;
 	}
-	catch (const args::Error& error) {
+	catch (const args::Error& error) 
+	{
 		std::cerr <<
 			"Error parsing arguments: " <<
 			error.what() <<

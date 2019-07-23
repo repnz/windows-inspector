@@ -1,16 +1,19 @@
 #pragma once
 #include <ntddk.h>
 
-struct Mem {
+struct Mem 
+{
 	static const ULONG Tag = 'znpr';
 
 	template <typename T>
-	static T* Allocate(SIZE_T Appendix = 0, POOL_TYPE pool = NonPagedPool) {
+	static T* Allocate(SIZE_T Appendix = 0, POOL_TYPE pool = NonPagedPool)
+	{
 		SIZE_T AllocationSize = sizeof(T) + Appendix;
 
 		PVOID Memory = ExAllocatePoolWithTag(pool, AllocationSize, Tag);
 
-		if (Memory == NULL) {
+		if (Memory == NULL) 
+		{
 			return NULL;
 		}
 

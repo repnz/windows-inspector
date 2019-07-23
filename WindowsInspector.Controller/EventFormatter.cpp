@@ -22,24 +22,13 @@ using std::right;
 
 const std::string columnSeperator = "  ||  ";
 
-struct stream_fill {
-	char old_fill;
-	std::ostream& ostream;
 
-	stream_fill(std::ostream& ostream, char c) : ostream(ostream){
-		old_fill = ostream.fill();
-		ostream << setfill(c);
-	}
-
-	~stream_fill() {
-		ostream << setfill(old_fill);
-	}
-};
-
-void EventFormatter::DumpEvent(std::ostream& outputStream, const EventHeader* event) {
+void EventFormatter::DumpEvent(std::ostream& outputStream, const EventHeader* event)
+{
 
 
-	switch (event->Type) {
+	switch (event->Type) 
+	{
 	case EventType::ProcessExit:
 		DumpProcessExitEvent(outputStream, *(ProcessExitEvent*)event);
 		break;
@@ -68,7 +57,8 @@ std::string EventFormatter::ToString(const EventHeader* header)
 	return evt.str();
 }
 
-void DumpTime(std::ostream& outputStream, const LARGE_INTEGER& time) {
+void DumpTime(std::ostream& outputStream, const LARGE_INTEGER& time)
+{
 	
 
 	SYSTEMTIME st;
@@ -85,7 +75,8 @@ void DumpTime(std::ostream& outputStream, const LARGE_INTEGER& time) {
 	outputStream << setfill(fillChar);
 }
 
-void DumpCommonInformation(std::ostream& outputStream, const EventHeader& e, const std::string& itemName) {
+void DumpCommonInformation(std::ostream& outputStream, const EventHeader& e, const std::string& itemName)
+{
 
 	DumpTime(outputStream, e.Time);
 	
@@ -101,7 +92,8 @@ void DumpProcessExitEvent(std::ostream& outputStream, const ProcessExitEvent& e)
 }
 
 
-std::string WideToString(const WCHAR* lpString, ULONG uSize) {
+std::string WideToString(const WCHAR* lpString, ULONG uSize) 
+{
 	
 	std::string s(uSize, ' ');
 

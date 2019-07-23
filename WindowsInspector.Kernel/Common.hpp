@@ -11,7 +11,8 @@
 #define INSPECTOR_GET_EVENTS_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_NEITHER, FILE_ANY_ACCESS)
 
 
-enum class EventType : short {
+enum class EventType : short
+{
     None,
     ProcessCreate,
     ProcessExit,
@@ -20,17 +21,20 @@ enum class EventType : short {
 	ThreadExit
 };
 
-struct EventHeader {
+struct EventHeader
+{
     EventType Type;
     USHORT Size;
     LARGE_INTEGER Time;
 };
 
-struct ProcessExitEvent : EventHeader {
+struct ProcessExitEvent : EventHeader 
+{
     ULONG ProcessId;
 };
 
-struct ProcessCreateEvent : EventHeader {
+struct ProcessCreateEvent : EventHeader
+{
     ULONG NewProcessId;
     ULONG CreatingProcessId;
 	ULONG ParentProcessId;
@@ -39,7 +43,8 @@ struct ProcessCreateEvent : EventHeader {
 	WCHAR CommandLine[1];
 };
 
-struct ThreadCreateEvent : EventHeader {
+struct ThreadCreateEvent : EventHeader 
+{
 	ULONG CreatingProcessId;
 	ULONG CreatingThreadId;
     ULONG NewThreadId;
@@ -47,12 +52,14 @@ struct ThreadCreateEvent : EventHeader {
 	ULONG_PTR StartAddress;
 };
 
-struct ThreadExitEvent : EventHeader {
+struct ThreadExitEvent : EventHeader
+{
 	ULONG ThreadId;
 	ULONG ProcessId;
 };
 
-struct ImageLoadEvent : EventHeader {
+struct ImageLoadEvent : EventHeader 
+{
     ULONG ProcessId;
 	ULONG ThreadId;
     ULONG_PTR LoadAddress;

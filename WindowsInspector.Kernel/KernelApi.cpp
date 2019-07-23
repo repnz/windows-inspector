@@ -10,7 +10,8 @@ bool KernelApiInitialize()
 
 	ZwQueryInformationThread = (ZwQueryInformationThreadFunc)MmGetSystemRoutineAddress(&ZwQueryInformationThreadString);
 
-	if (ZwQueryInformationThread == NULL) {
+	if (ZwQueryInformationThread == NULL)
+	{
 		return false;
 	}
 

@@ -2,13 +2,16 @@
 #include <ntifs.h>
 #include <ntddk.h>
 
-struct ObjectHandle {
+struct ObjectHandle 
+{
 	HANDLE Handle;
 
-	ObjectHandle(HANDLE Handle) : Handle(Handle) {
+	ObjectHandle(HANDLE Handle) : Handle(Handle) 
+	{
 	}
 
-	~ObjectHandle() {
+	~ObjectHandle() 
+	{
 		ZwClose(Handle);
 	}
 };

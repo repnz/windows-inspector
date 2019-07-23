@@ -1,7 +1,8 @@
 #include "InspectorDriver.hpp"
 #include <stdexcept>
 
-InspectorDriver::InspectorDriver() {
+InspectorDriver::InspectorDriver() 
+{
 	hDriver = OwnedHandle(CreateFileA(
 		"\\\\.\\WindowsInspector",
 		GENERIC_ALL,
@@ -12,13 +13,15 @@ InspectorDriver::InspectorDriver() {
 		NULL
 	));
 
-	if (hDriver.get() == INVALID_HANDLE_VALUE) {
+	if (hDriver.get() == INVALID_HANDLE_VALUE) 
+	{
 		throw std::runtime_error("Could not create handle to driver object");
 	}
 
 }
 
-InspectorDriver::InspectorDriver(OwnedHandle hDriver) : hDriver(std::move(hDriver)){
+InspectorDriver::InspectorDriver(OwnedHandle hDriver) : hDriver(std::move(hDriver))
+{
 }
 
 DWORD InspectorDriver::ReadEvents(PVOID buffer, DWORD length)
@@ -34,7 +37,8 @@ DWORD InspectorDriver::ReadEvents(PVOID buffer, DWORD length)
 		NULL,
 		0,
 		&bytesReturned,
-		NULL)) {
+		NULL)) 
+	{
 		throw std::runtime_error("Some error communicating with the driver");
 	}
 
