@@ -1,5 +1,5 @@
 #include "FastMutex.hpp"
-#include <ntddk.h>
+#include <ntifs.h>
 
 void FastMutex::Init() 
 {

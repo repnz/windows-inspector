@@ -1,11 +1,10 @@
 #pragma once
 
 #ifdef KERNEL_DRIVER
-#include <ntddk.h>
+#include <ntifs.h>
 #else
 #include <windows.h>
 #include <winioctl.h>
-#define IM_ORI_DAMARI
 #endif
 
 #define INSPECTOR_GET_EVENTS_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_NEITHER, FILE_ANY_ACCESS)

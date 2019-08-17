@@ -1,5 +1,5 @@
 #pragma once
-#include <ntddk.h>	
+#include <ntifs.h>	
 
 #define DRIVER_PREFIX "WindowsInspector: "
 #define KdPrintMessage(Msg) KdPrint((DRIVER_PREFIX Msg "\n"))

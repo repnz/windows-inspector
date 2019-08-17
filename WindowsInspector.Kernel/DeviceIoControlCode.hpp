@@ -13,7 +13,7 @@ struct DeviceIoControlCode
 	UCHAR Access : 2;
 	USHORT DeviceType : 16;
 
-	DeviceIoControlCode(ULONG Code) 
+	DeviceIoControlCode(ULONG Code)
 	{
 		Method = METHOD_FROM_CTL_CODE(Code);
 		Function = FUNCTION_FROM_CTL_CODE(Code);

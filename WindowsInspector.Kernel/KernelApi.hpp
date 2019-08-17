@@ -1,5 +1,5 @@
 #pragma once
-#include <ntddk.h>
+#include <ntifs.h>
 
 #define THREAD_QUERY_INFORMATION 0x40
 

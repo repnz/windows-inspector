@@ -175,6 +175,8 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
+      <WarningLevel>Level4</WarningLevel>
+      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>
@@ -184,6 +186,8 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
+      <WarningLevel>Level4</WarningLevel>
+      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>
@@ -210,6 +214,11 @@
     <ClCompile Include="DataItemList.cpp" />
     <ClCompile Include="KernelApi.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="EventList.cpp" />
+    <ClCompile Include="Providers\ImageLoadProvider.cpp" />
+    <ClCompile Include="Providers\ProcessProvider.cpp" />
+    <ClCompile Include="Providers\Providers.cpp" />
+    <ClCompile Include="Providers\ThreadProvider.cpp" />
     <ClCompile Include="UserModeMapping.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -221,9 +230,15 @@
     <ClInclude Include="DataItemList.hpp" />
     <ClInclude Include="KernelApi.hpp" />
     <ClInclude Include="Mem.hpp" />
+    <ClInclude Include="EventList.hpp" />
+    <ClInclude Include="Providers\ImageCallbacks.hpp" />
+    <ClInclude Include="Providers\ImageLoadProvider.hpp" />
+    <ClInclude Include="Providers\ProcessCreation.hpp" />
+    <ClInclude Include="Providers\ProcessProvider.hpp" />
+    <ClInclude Include="Providers\Providers.hpp" />
+    <ClInclude Include="Providers\ThreadCallbacks.hpp" />
+    <ClInclude Include="Providers\ThreadProvider.hpp" />
     <ClInclude Include="UserModeMapping.hpp" />
-    <ClInclude Include="ObjectHandle.hpp" />
-    <ClInclude Include="ObjectRef.hpp" />
     <ClInclude Include="ScopedLock.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
