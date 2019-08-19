@@ -1,8 +1,9 @@
 #include "ProcessProvider.hpp"
 #include <WindowsInspector.Kernel/Common.hpp>
 #include <WindowsInspector.Kernel/Debug.hpp>
-#include <WindowsInspector.Kernel/Ioctl.hpp>
+#include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ProcessProvider.hpp"
+
 
 void OnProcessNotify(_Inout_ PEPROCESS, _In_ HANDLE ProcessId, _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo);
 

@@ -1,7 +1,7 @@
 #include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/Mem.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/Ioctl.hpp>
+#include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ImageLoadProvider.hpp"
 
 void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo);

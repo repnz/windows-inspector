@@ -1,7 +1,7 @@
 #include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/KernelApi.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/Ioctl.hpp>
+#include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ThreadProvider.hpp"
 
 void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create);

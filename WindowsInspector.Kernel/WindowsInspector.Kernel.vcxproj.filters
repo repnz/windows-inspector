@@ -42,6 +42,9 @@
     <ClCompile Include="Providers\ThreadProvider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="EventBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Ioctl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -77,10 +80,13 @@
     <ClInclude Include="Providers\ThreadProvider.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Ioctl.hpp">
+    <ClInclude Include="Debug.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Debug.hpp">
+    <ClInclude Include="EventBuffer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ioctl.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
