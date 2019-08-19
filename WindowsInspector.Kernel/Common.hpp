@@ -7,7 +7,8 @@
 #include <winioctl.h>
 #endif
 
-#define INSPECTOR_GET_EVENTS_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_NEITHER, FILE_ANY_ACCESS)
+
+#define INSPECTOR_LISTEN_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 
 enum class EventType : short
@@ -19,6 +20,18 @@ enum class EventType : short
 	ThreadCreate,
 	ThreadExit
 };
+
+const char* const EventTypeStr[] = 
+{
+    "None",
+    "ProcessCreate",
+    "ProcessExit",
+    "ImageLoad",
+    "ThreadCreate",
+    "ThreadExit"
+};
+
+#define EVENT_TYPE_STR(Type) EventTypeStr[(int)Type]
 
 struct EventHeader
 {
@@ -65,4 +78,17 @@ struct ImageLoadEvent : EventHeader
     ULONG_PTR ImageSize;
 	ULONG ImageFileNameLength;
     WCHAR ImageFileName[1];
+};
+
+struct CircularBuffer 
+{
+    PVOID BaseAddress;
+
+    // This member might not be synchronized with TailOffset / HeadOffset
+    // Use it with caution
+    LONG Count;
+    ULONG HeadOffset;
+    ULONG TailOffset;
+    ULONG ResetOffset;
+    HANDLE Event;
 };

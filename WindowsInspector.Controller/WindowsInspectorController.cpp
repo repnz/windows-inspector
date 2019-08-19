@@ -9,25 +9,42 @@ static volatile bool Running = true;
 void WindowsInspectorController::Listen() 
 {
 	InspectorDriver driver;
-	const int MB = 1024 * 1024;
-	std::vector<BYTE> vec(MB);
-	BYTE* buffer = &vec[0];
+    CircularBuffer* buffer;
+    
+    driver.Listen(&buffer);
 
-	while (Running) 
+	while (Running)
 	{
-		SIZE_T readBytes = driver.ReadEvents(buffer, (DWORD)vec.size());
-		SIZE_T bufferIndex = 0;
+        if (!buffer->Count)
+        {
+            // This should almost never happen
+            WaitForSingleObject(buffer->Event, INFINITE);
+        }
+        
+        LONG count = buffer->Count;
 
-		while (bufferIndex < readBytes) 
-		{
-			const EventHeader* event = (const EventHeader*)(buffer + bufferIndex);
-			EventFormatter::DumpEvent(std::cout, event);
-			bufferIndex += event->Size;
-		}
+        for (LONG i = 0; i < count; i++)
+        {
+            // Handle event
+            const EventHeader* event = (const EventHeader*)((PBYTE)buffer->BaseAddress + buffer->HeadOffset);
+            EventFormatter::DumpEvent(std::cout, event);
+        
+            // Increment HeadOffset
+            ULONG HeadOffset = buffer->HeadOffset + event->Size;
 
-		Sleep(200);
+            if (HeadOffset > buffer->ResetOffset)
+            {
+                buffer->HeadOffset = 0;
+            }
+            else 
+            {
+                buffer->HeadOffset = HeadOffset;
+            }
+        }       
+
+        InterlockedAdd(&buffer->Count, -count);
 	}
-
+	
 	std::cout << "Received a Signal to exit!~" << std::endl;
 }
 

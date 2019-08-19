@@ -1,6 +1,6 @@
 #pragma once
 #include <WindowsInspector.Kernel/KernelApi.hpp>
-#include "Error.hpp"
+#include "Debug.hpp"
 
 ZwQueryInformationThreadFunc ZwQueryInformationThread;
 
@@ -14,7 +14,6 @@ bool KernelApiInitialize()
 	{
 		return false;
 	}
-
 
 	return true;
 }

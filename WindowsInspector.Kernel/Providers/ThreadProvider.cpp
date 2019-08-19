@@ -1,9 +1,7 @@
-#include <WindowsInspector.Kernel/Error.hpp>
+#include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/KernelApi.hpp>
-#include <WindowsInspector.Kernel/DataItemList.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/EventList.hpp>
-#include <WindowsInspector.Kernel/Mem.hpp>
+#include <WindowsInspector.Kernel/Ioctl.hpp>
 #include "ThreadProvider.hpp"
 
 void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create);
@@ -28,7 +26,7 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint((DRIVER_PREFIX "Failed to find thread with id %d (0x%08X)\n", ThreadId, status));
+        D_ERROR_STATUS_ARGS("Failed to find thread with id %d", status, ThreadId);
         return status;
     }
 
@@ -46,7 +44,7 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 
     if (!NT_SUCCESS(status))
     {
-        KdPrintError("Failed to create a handle to the new thread", status);
+        D_ERROR_STATUS("Failed to create a handle to the new thread", status);
         return status;
     }
 
@@ -60,64 +58,73 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 
     if (!NT_SUCCESS(status))
     {
-        KdPrint((DRIVER_PREFIX "Cannot query thread start address %d (0x%08X)\n", ThreadId, status));
-        ZwClose(CreatingThreadObjectHandle);
+        D_ERROR_STATUS_ARGS("Cannot query thread start address %d", status, ThreadId);
+        ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
         return status;
     }
 
-    ZwClose(CreatingThreadObjectHandle);
+    ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
     return STATUS_SUCCESS;
 }
 
-void OnThreadStart(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId)
+void OnThreadCreate(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId)
 {
-    auto* newItem = Mem::Allocate<ListItem<ThreadCreateEvent>>();
+    
+    ULONG_PTR StartAddress;
 
-    if (newItem == nullptr)
+    NTSTATUS status = GetThreadWin32StartAddress(TargetThreadId, &StartAddress);
+
+    if (!NT_SUCCESS(status))
     {
-        KdPrintMessage("Could not allocate thread start information");
+        D_ERROR_STATUS_ARGS("Could not find thread start address %d", status, TargetThreadId);
         return;
     }
 
-    ThreadCreateEvent& info = newItem->Item;
-    info.Size = sizeof(ThreadCreateEvent);
-    info.Type = EventType::ThreadCreate;
-    KeQuerySystemTimePrecise(&info.Time);
+    BufferEvent event;
 
-    if (!NT_SUCCESS(GetThreadWin32StartAddress(TargetThreadId, &info.StartAddress)))
+    status = AllocateBufferEvent(&event, sizeof(ThreadCreateEvent));
+
+    if (!NT_SUCCESS(status))
     {
-        ExFreePool(newItem);
+        D_ERROR_STATUS("Could not allocate ThreadCreateEvent", status);
         return;
     }
 
-    info.CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
-    info.CreatingThreadId = HandleToUlong(PsGetCurrentThreadId());
-    info.NewThreadId = TargetThreadId;
-    info.TargetProcessId = TargetProcessId;
+    ThreadCreateEvent* info = (ThreadCreateEvent*)event.Memory;
+    info->Size = sizeof(ThreadCreateEvent);
+    info->Type = EventType::ThreadCreate;
+    KeQuerySystemTimePrecise(&info->Time);
 
-    InsertIntoList(&newItem->Entry, EventType::ThreadCreate);
+    info->CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
+    info->CreatingThreadId = HandleToUlong(PsGetCurrentThreadId());
+    info->NewThreadId = TargetThreadId;
+    info->TargetProcessId = TargetProcessId;
+
+    SendBufferEvent(&event);
 }
 
 
 void OnThreadExit(_In_ ULONG ProcessId, _In_ ULONG ThreadId)
 {
-    auto* newItem = Mem::Allocate<ListItem<ThreadExitEvent>>();
+    BufferEvent event;
 
-    if (newItem == nullptr)
+    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ThreadExitEvent));
+
+    if (!NT_SUCCESS(status))
     {
-        KdPrintMessage("Could not allocate thread exit information");
+        D_ERROR_STATUS("Could not allocate ThreadExitEvent", status);
         return;
     }
 
-    ThreadExitEvent& info = newItem->Item;
+    ThreadExitEvent* info = (ThreadExitEvent*)event.Memory;
 
-    info.Size = sizeof(ThreadExitEvent);
-    info.Type = EventType::ThreadExit;
-    KeQuerySystemTimePrecise(&info.Time);
-    info.ThreadId = ThreadId;
-    info.ProcessId = ProcessId;
+    info->Size = sizeof(ThreadExitEvent);
+    info->Type = EventType::ThreadExit;
+    KeQuerySystemTimePrecise(&info->Time);
+    info->ThreadId = ThreadId;
+    info->ProcessId = ProcessId;
 
-    InsertIntoList(&newItem->Entry, EventType::ThreadExit);
+    SendBufferEvent(&event);
 }
 
 void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create)
@@ -125,7 +132,7 @@ void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Cr
 
     if (Create)
     {
-        OnThreadStart(HandleToUlong(ProcessId), HandleToUlong(ThreadId));
+        OnThreadCreate(HandleToUlong(ProcessId), HandleToUlong(ThreadId));
     }
     else
     {

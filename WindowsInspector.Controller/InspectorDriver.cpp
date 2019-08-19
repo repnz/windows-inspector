@@ -24,23 +24,20 @@ InspectorDriver::InspectorDriver(OwnedHandle hDriver) : hDriver(std::move(hDrive
 {
 }
 
-DWORD InspectorDriver::ReadEvents(PVOID buffer, DWORD length)
+void InspectorDriver::Listen(CircularBuffer** buffer)
 {
-	
-	DWORD bytesReturned;
-
-	if (!DeviceIoControl(
-		hDriver.get(),
-		INSPECTOR_GET_EVENTS_CTL_CODE,
-		buffer,
-		length,
-		NULL,
-		0,
-		&bytesReturned,
-		NULL)) 
-	{
-		throw std::runtime_error("Some error communicating with the driver");
-	}
-
-	return bytesReturned;
+    DWORD bytesReturned;
+    
+    if (!DeviceIoControl(
+        hDriver.get(),
+        INSPECTOR_LISTEN_CTL_CODE,
+        buffer,
+        sizeof(ULONG_PTR),
+        buffer,
+        sizeof(ULONG_PTR),
+        &bytesReturned,
+        NULL))
+    {
+        throw std::runtime_error("Could not call INSPECTOR_LISTEN ioctl");
+    }
 }

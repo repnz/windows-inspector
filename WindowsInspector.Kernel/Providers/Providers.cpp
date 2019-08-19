@@ -1,48 +1,48 @@
 #include "Providers.hpp"
-#include <WindowsInspector.Kernel/Error.hpp>
+#include <WindowsInspector.Kernel/Debug.hpp>
 
 NTSTATUS InitializeProviders()
 {
     bool processCallback = false;
     bool threadCallback = false;
     bool imageCallback = false;
+
     NTSTATUS status;
 
     do
     {
-        KdPrintMessage("Registering Process Callbacks...");
+        D_INFO("Registering Process Callbacks...");
 
         status = InitializeProcessProvider();
 
         if (!NT_SUCCESS(status))
         {
-            KdPrintError("Failed to register process callback", status);
+            D_ERROR_STATUS("Failed to register process callback", status);
             break;
         }
 
         processCallback = true;
 
 
-        KdPrintMessage("Registering Thread Callbacks...");
+        D_INFO("Registering Thread Callbacks...");
 
         status = InitializeThreadProvider();
 
         if (!NT_SUCCESS(status))
         {
-            KdPrintError("Failed to create thread creation callback", status);
+            D_ERROR_STATUS("Failed to create thread creation callback", status);
             break;
         }
 
         threadCallback = true;
 
-
-        KdPrintMessage("Registering Image Callbacks");
+        D_INFO("Registering Image Callbacks");
 
         status = InitializeImageLoadProvider();
 
         if (!NT_SUCCESS(status))
         {
-            KdPrintError("Failed to create image load callback", status);
+            D_ERROR_STATUS("Failed to create image load callback", status);
             break;
         }
 

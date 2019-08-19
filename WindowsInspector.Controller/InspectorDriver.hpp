@@ -24,5 +24,7 @@ public:
 	InspectorDriver();
 	InspectorDriver(OwnedHandle hDriver);
 
+    void Listen(CircularBuffer** buffer);
+
 	DWORD ReadEvents(PVOID buffer, DWORD length);
 };

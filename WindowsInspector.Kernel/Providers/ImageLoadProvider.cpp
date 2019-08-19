@@ -1,8 +1,7 @@
-#include <WindowsInspector.Kernel/Error.hpp>
+#include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/Mem.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/DataItemList.hpp>
-#include <WindowsInspector.Kernel/EventList.hpp>
+#include <WindowsInspector.Kernel/Ioctl.hpp>
 #include "ImageLoadProvider.hpp"
 
 void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo);
@@ -36,26 +35,27 @@ void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE Proce
         fullImageNameLen = UnknownSize;
     }
 
-    auto* newItem = Mem::Allocate<ListItem<ImageLoadEvent>>(fullImageNameLen);
+    BufferEvent event;
 
-    if (newItem == NULL)
+    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ImageLoadEvent) + fullImageNameLen);
+
+    if (!NT_SUCCESS(status))
     {
-        KdPrintMessage("Could not allocate load image info");
+        D_ERROR("Could not allocate load image info");
         return;
     }
 
-    ImageLoadEvent& info = newItem->Item;
+    ImageLoadEvent* info = (ImageLoadEvent*)event.Memory;
 
-    RtlCopyMemory(info.ImageFileName, fullImageName, fullImageNameLen);
-    info.ImageFileNameLength = fullImageNameLen / 2;
-    info.ImageSize = ImageInfo->ImageSize;
-    info.ProcessId = HandleToUlong(ProcessId);
-    info.LoadAddress = (ULONG_PTR)ImageInfo->ImageBase;
-    info.ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    info.Size = sizeof(ImageLoadEvent) + (USHORT)fullImageNameLen;
-    info.Type = EventType::ImageLoad;
-    KeQuerySystemTimePrecise(&info.Time);
+    RtlCopyMemory(info->ImageFileName, fullImageName, fullImageNameLen);
+    info->ImageFileNameLength = fullImageNameLen / 2;
+    info->ImageSize = ImageInfo->ImageSize;
+    info->ProcessId = HandleToUlong(ProcessId);
+    info->LoadAddress = (ULONG_PTR)ImageInfo->ImageBase;
+    info->ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    info->Size = sizeof(ImageLoadEvent) + (USHORT)fullImageNameLen;
+    info->Type = EventType::ImageLoad;
+    KeQuerySystemTimePrecise(&info->Time);
 
-    InsertIntoList(&newItem->Entry, EventType::ImageLoad);
-
+    SendBufferEvent(&event);
 }

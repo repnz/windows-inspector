@@ -210,27 +210,20 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="FastMutex.cpp" />
-    <ClCompile Include="DataItemList.cpp" />
+    <ClCompile Include="Ioctl.cpp" />
     <ClCompile Include="KernelApi.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="EventList.cpp" />
     <ClCompile Include="Providers\ImageLoadProvider.cpp" />
     <ClCompile Include="Providers\ProcessProvider.cpp" />
     <ClCompile Include="Providers\Providers.cpp" />
     <ClCompile Include="Providers\ThreadProvider.cpp" />
-    <ClCompile Include="UserModeMapping.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.hpp" />
-    <ClInclude Include="cpptools.hpp" />
-    <ClInclude Include="DeviceIoControlCode.hpp" />
-    <ClInclude Include="Error.hpp" />
-    <ClInclude Include="FastMutex.hpp" />
-    <ClInclude Include="DataItemList.hpp" />
+    <ClInclude Include="Debug.hpp" />
+    <ClInclude Include="Ioctl.hpp" />
     <ClInclude Include="KernelApi.hpp" />
     <ClInclude Include="Mem.hpp" />
-    <ClInclude Include="EventList.hpp" />
     <ClInclude Include="Providers\ImageCallbacks.hpp" />
     <ClInclude Include="Providers\ImageLoadProvider.hpp" />
     <ClInclude Include="Providers\ProcessCreation.hpp" />
@@ -238,8 +231,6 @@
     <ClInclude Include="Providers\Providers.hpp" />
     <ClInclude Include="Providers\ThreadCallbacks.hpp" />
     <ClInclude Include="Providers\ThreadProvider.hpp" />
-    <ClInclude Include="UserModeMapping.hpp" />
-    <ClInclude Include="ScopedLock.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
