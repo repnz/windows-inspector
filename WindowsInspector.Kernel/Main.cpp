@@ -10,6 +10,9 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
 
+PDRIVER_OBJECT g_DriverObject;
+PDEVICE_OBJECT g_DeviceObject;
+
 
 extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNICODE_STRING RegistryPath) {
 
@@ -25,7 +28,6 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNI
 		return STATUS_INVALID_ADDRESS;
 	}
     
-	PDEVICE_OBJECT deviceObject = nullptr;
 	NTSTATUS status = STATUS_SUCCESS;
 
 	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
@@ -34,7 +36,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNI
 	D_INFO("Creating Device...");
 
     InitializeIoctlHandlers();
-
+    
     // ExclusiveAccess: TRUE
 	status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &deviceObject);
 

@@ -18,7 +18,8 @@ enum class EventType : short
     ProcessExit,
 	ImageLoad,
 	ThreadCreate,
-	ThreadExit
+	ThreadExit,
+    RegistryEvent
 };
 
 const char* const EventTypeStr[] = 
@@ -78,6 +79,21 @@ struct ImageLoadEvent : EventHeader
     ULONG_PTR ImageSize;
 	ULONG ImageFileNameLength;
     WCHAR ImageFileName[1];
+};
+
+enum class RegistryEventType
+{
+    Write,
+
+};
+
+struct RegistryEvent : EventHeader
+{
+    ULONG Processid;
+    ULONG ThreadId;
+    RegistryEventType SubType;
+    ULONG KeyNameLength;
+    WCHAR KeyNameOffset;
 };
 
 struct CircularBuffer 

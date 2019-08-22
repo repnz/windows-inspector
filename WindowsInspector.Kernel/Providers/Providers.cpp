@@ -6,6 +6,7 @@ NTSTATUS InitializeProviders()
     bool processCallback = false;
     bool threadCallback = false;
     bool imageCallback = false;
+    bool registryCallback = false;
 
     NTSTATUS status;
 
@@ -48,10 +49,26 @@ NTSTATUS InitializeProviders()
 
         imageCallback = true;
 
+        D_INFO("Registering Registry Callbacks");
+
+        status = InitializeRegistryProvider();
+
+        if (!NT_SUCCESS(status))
+        {
+            D_ERROR_STATUS("Failed to initialize registry provider", status);
+        }
+
+        registryCallback = true;
+
     } while (false);
     
     if (!NT_SUCCESS(status))
     {
+        if (registryCallback)
+        {
+            ReleaseRegistryProvider();
+        }
+
         if (imageCallback)
         {
             ReleaseImageLoadProvider();
@@ -73,7 +90,9 @@ NTSTATUS InitializeProviders()
 
 void FreeProviders()
 {
+    ReleaseRegistryProvider();
     ReleaseImageLoadProvider();
-    ReleaseProcessProvider();
     ReleaseThreadProvider();
+    ReleaseProcessProvider();
+    
 }
