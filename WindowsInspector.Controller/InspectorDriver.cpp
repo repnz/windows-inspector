@@ -46,3 +46,22 @@ CircularBuffer* InspectorDriver::Listen()
 
     return buffer;
 }
+
+void InspectorDriver::Stop()
+{
+    DWORD bytesReturned;
+
+    if (!DeviceIoControl(
+        hDriver.get(),
+        INSPECTOR_STOP_CTL_CODE,
+        NULL,
+        0,
+        NULL,
+        0,
+        &bytesReturned,
+        NULL
+    ))
+    {
+        throw std::runtime_error("Could not call INSPECTOR_STOP iocl");
+    }
+}

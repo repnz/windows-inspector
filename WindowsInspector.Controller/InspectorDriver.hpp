@@ -25,4 +25,5 @@ public:
 	InspectorDriver(OwnedHandle hDriver);
 
     CircularBuffer* Listen();
+    void Stop();
 };

@@ -4,5 +4,5 @@ class WindowsInspectorController
 {
 public:
 	static void Listen();
-	static void Stop();
+    static void Stop();
 };

@@ -4,3 +4,5 @@
 NTSTATUS InitializeIoctlHandlers();
 
 NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation);
+
+NTSTATUS InspectorStop();

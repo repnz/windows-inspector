@@ -36,3 +36,10 @@ NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
 
     return STATUS_SUCCESS;
 }
+
+NTSTATUS InspectorStop()
+{
+    FreeProviders();
+
+    return STATUS_SUCCESS;
+}

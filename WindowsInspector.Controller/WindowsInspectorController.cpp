@@ -49,4 +49,5 @@ void WindowsInspectorController::Listen()
 void WindowsInspectorController::Stop()
 {
 	Running = false;
+    driver.Stop();
 }

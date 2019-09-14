@@ -105,6 +105,10 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
     {
         Status = InspectorListen(Irp, iosp);
     }
+    else if (IoControlCode == INSPECTOR_STOP_CTL_CODE)
+    {
+        Status = InspectorStop();
+    }
     else
     {
         Status = STATUS_NOT_SUPPORTED;

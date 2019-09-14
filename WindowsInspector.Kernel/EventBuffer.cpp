@@ -151,6 +151,11 @@ NTSTATUS InitializeEventBuffer(CircularBuffer ** CircularBufferAddress)
     return STATUS_SUCCESS;
 }
 
+NTSTATUS WaitForEvents()
+{
+    
+}
+
 NTSTATUS AllocateBufferEvent(BufferEvent* Event, ULONG EventSize)
 {
     if (!KernelMappedBuffer.IsMapped)
