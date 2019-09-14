@@ -1,5 +1,4 @@
 #include <WindowsInspector.Kernel/Debug.hpp>
-#include <WindowsInspector.Kernel/Mem.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
 #include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ImageLoadProvider.hpp"
@@ -21,23 +20,23 @@ ULONG UnknownSize = sizeof(Unknown);
 
 void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo)
 {
-    ULONG fullImageNameLen = 0;
+    ULONG fullImageNameSize = 0;
     PCWSTR fullImageName;
 
     if (FullImageName)
     {
         fullImageName = FullImageName->Buffer;
-        fullImageNameLen = FullImageName->Length;
+        fullImageNameSize = FullImageName->Length;
     }
     else
     {
         fullImageName = Unknown;
-        fullImageNameLen = UnknownSize;
+        fullImageNameSize = UnknownSize;
     }
 
     BufferEvent event;
 
-    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ImageLoadEvent) + fullImageNameLen);
+    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ImageLoadEvent) + fullImageNameSize);
 
     if (!NT_SUCCESS(status))
     {
@@ -47,13 +46,14 @@ void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE Proce
 
     ImageLoadEvent* info = (ImageLoadEvent*)event.Memory;
 
-    RtlCopyMemory(info->ImageFileName, fullImageName, fullImageNameLen);
-    info->ImageFileNameLength = fullImageNameLen / 2;
+    info->ImageFileName.Size = fullImageNameSize;
+    RtlCopyMemory(info->GetImageFileName(), fullImageName, fullImageNameSize);
+    
     info->ImageSize = ImageInfo->ImageSize;
     info->ProcessId = HandleToUlong(ProcessId);
     info->LoadAddress = (ULONG_PTR)ImageInfo->ImageBase;
     info->ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    info->Size = sizeof(ImageLoadEvent) + (USHORT)fullImageNameLen;
+    info->Size = sizeof(ImageLoadEvent) + (USHORT)fullImageNameSize;
     info->Type = EventType::ImageLoad;
     KeQuerySystemTimePrecise(&info->Time);
 

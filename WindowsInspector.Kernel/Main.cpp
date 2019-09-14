@@ -3,6 +3,7 @@
 #include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/Ioctl.hpp>
 #include <WindowsInspector.Kernel/Common.hpp>
+#include <WindowsInspector.Kernel/DriverObject.hpp>
 
 NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
 
@@ -10,11 +11,7 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 
 void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
 
-PDRIVER_OBJECT g_DriverObject;
-PDEVICE_OBJECT g_DeviceObject;
-
-
-extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNICODE_STRING RegistryPath) {
+extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath) {
 
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
@@ -38,7 +35,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNI
     InitializeIoctlHandlers();
     
     // ExclusiveAccess: TRUE
-	status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &deviceObject);
+	status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &g_DeviceObject);
 
 	if (!NT_SUCCESS(status))
 	{
@@ -53,7 +50,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ const PUNI
 	if (!NT_SUCCESS(status))
 	{
 		D_ERROR_STATUS("Failed to create symbolic link", status);
-        IoDeleteDevice(deviceObject);
+        IoDeleteDevice(g_DeviceObject);
         return status;
 	}
 

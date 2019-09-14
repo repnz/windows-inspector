@@ -1,98 +1,92 @@
 #include "Providers.hpp"
 #include <WindowsInspector.Kernel/Debug.hpp>
+#include <WindowsInspector.Kernel/Providers/ThreadProvider.hpp>
+#include <WindowsInspector.Kernel/Providers/ProcessProvider.hpp>
+#include <WindowsInspector.Kernel/Providers/ImageLoadProvider.hpp>
+#include "RegistryProvider.hpp"
 
-NTSTATUS InitializeProviders()
+typedef enum _PROVIDER_STATE {
+    ProviderStateNotRunning,
+    ProviderStateDisabled,
+    ProviderStateRunning
+} PROVIDER_STATE;
+
+typedef struct _PROVIDER_DESCRIPTOR {
+    NTSTATUS(*Start)();
+    VOID(*Stop)();
+    PCWSTR ProviderName;
+    PROVIDER_STATE State;
+} PROVIDER_DESCRIPTOR, * PPROVIDER_DESCRIPTOR;
+
+
+PROVIDER_DESCRIPTOR Providers[] = {
+    {
+        InitializeProcessProvider,
+        ReleaseProcessProvider,
+        L"ProcessProvider",
+        ProviderStateNotRunning
+    },
+    {
+        InitializeImageLoadProvider,
+        ReleaseImageLoadProvider,
+        L"ImageLoadProvider",
+        ProviderStateNotRunning
+    },
+    {
+        InitializeThreadProvider,
+        ReleaseThreadProvider,
+        L"ThreadProvider",
+        ProviderStateNotRunning
+    },
+    {
+        InitializeRegistryProvider,
+        ReleaseRegistryProvider,
+        L"RegistryProvider",
+        ProviderStateDisabled
+    }
+};
+
+CONST SIZE_T NumberOfProviders = sizeof(Providers) / sizeof(PROVIDER_DESCRIPTOR);
+
+NTSTATUS 
+InitializeProviders()
 {
-    bool processCallback = false;
-    bool threadCallback = false;
-    bool imageCallback = false;
-    bool registryCallback = false;
-
-    NTSTATUS status;
-
-    do
-    {
-        D_INFO("Registering Process Callbacks...");
-
-        status = InitializeProcessProvider();
-
-        if (!NT_SUCCESS(status))
-        {
-            D_ERROR_STATUS("Failed to register process callback", status);
-            break;
-        }
-
-        processCallback = true;
-
-
-        D_INFO("Registering Thread Callbacks...");
-
-        status = InitializeThreadProvider();
-
-        if (!NT_SUCCESS(status))
-        {
-            D_ERROR_STATUS("Failed to create thread creation callback", status);
-            break;
-        }
-
-        threadCallback = true;
-
-        D_INFO("Registering Image Callbacks");
-
-        status = InitializeImageLoadProvider();
-
-        if (!NT_SUCCESS(status))
-        {
-            D_ERROR_STATUS("Failed to create image load callback", status);
-            break;
-        }
-
-        imageCallback = true;
-
-        D_INFO("Registering Registry Callbacks");
-
-        status = InitializeRegistryProvider();
-
-        if (!NT_SUCCESS(status))
-        {
-            D_ERROR_STATUS("Failed to initialize registry provider", status);
-        }
-
-        registryCallback = true;
-
-    } while (false);
+    NTSTATUS status = STATUS_SUCCESS;
     
-    if (!NT_SUCCESS(status))
+    for (ULONG i = 0; i < NumberOfProviders; i++)
     {
-        if (registryCallback)
+        if (Providers[i].State == ProviderStateDisabled)
         {
-            ReleaseRegistryProvider();
+            D_INFO_ARGS("Provider %ws is disabled.", Providers[i].ProviderName);
+            continue;
         }
+        
+        D_INFO_ARGS("Initializing Provider %ws", Providers[i].ProviderName);
 
-        if (imageCallback)
-        {
-            ReleaseImageLoadProvider();
-        }
+        status = Providers[i].Start();
 
-        if (threadCallback)
+        if (!NT_SUCCESS(status))
         {
-            ReleaseThreadProvider();
-        }
+            D_ERROR_STATUS_ARGS("Could not initialize provider \"%ws\"", status, Providers[i].ProviderName);
+            
+            FreeProviders();
 
-        if (processCallback)
-        {
-            ReleaseProcessProvider();
+            return status;
         }
     }
 
     return status;
 }
 
-void FreeProviders()
+VOID
+FreeProviders()
 {
-    ReleaseRegistryProvider();
-    ReleaseImageLoadProvider();
-    ReleaseThreadProvider();
-    ReleaseProcessProvider();
+    for (ULONG i = 0; i < NumberOfProviders; i++)
+    {
+        if (Providers[i].State == ProviderStateRunning)
+        {
+            Providers[i].Stop();
+        }
+    }
     
 }

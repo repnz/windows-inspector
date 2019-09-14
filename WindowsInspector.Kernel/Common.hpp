@@ -29,10 +29,12 @@ const char* const EventTypeStr[] =
     "ProcessExit",
     "ImageLoad",
     "ThreadCreate",
-    "ThreadExit"
+    "ThreadExit",
+    "RegistryEvent"
 };
 
 #define EVENT_TYPE_STR(Type) EventTypeStr[(int)Type]
+
 
 struct EventHeader
 {
@@ -40,6 +42,15 @@ struct EventHeader
     USHORT Size;
     LARGE_INTEGER Time;
 };
+
+struct AppendedEventBuffer
+{
+    ULONG Offset;
+    ULONG Size;
+};
+
+#define EVENT_GET_APPENDIX(Event, Appendix, Type) (Type)(((PUCHAR)Event) + Appendix.Offset)
+
 
 struct ProcessExitEvent : EventHeader 
 {
@@ -52,8 +63,17 @@ struct ProcessCreateEvent : EventHeader
     ULONG CreatingProcessId;
 	ULONG ParentProcessId;
 	ULONG CreatingThreadId;
-    USHORT CommandLineLength;
-	WCHAR CommandLine[1];
+    AppendedEventBuffer CommandLine;
+
+    PWSTR GetProcessCommandLine()
+    {
+        return EVENT_GET_APPENDIX(this, CommandLine, PWSTR);
+    }
+
+    PCWSTR GetProcessCommandLine() const
+    {
+        return EVENT_GET_APPENDIX(this, CommandLine, PCWSTR);
+    }
 };
 
 struct ThreadCreateEvent : EventHeader 
@@ -77,23 +97,90 @@ struct ImageLoadEvent : EventHeader
 	ULONG ThreadId;
     ULONG_PTR LoadAddress;
     ULONG_PTR ImageSize;
-	ULONG ImageFileNameLength;
-    WCHAR ImageFileName[1];
+    AppendedEventBuffer ImageFileName;
+    
+
+    PWSTR GetImageFileName()
+    {
+        return EVENT_GET_APPENDIX(this, ImageFileName, PWSTR);
+    }
+
+    PCWSTR GetImageFileName() const
+    {
+        return EVENT_GET_APPENDIX(this, ImageFileName, PCWSTR);
+    }
 };
+
 
 enum class RegistryEventType
 {
-    Write,
+    DeleteKey,
+    SetValue,
+    RenameKey,
+    QueryValue,
+    DeleteValue
 
 };
+
+const char* const RegistryEventTypeStr[] =
+{
+    "DeleteKey",
+    "SetValue",
+    "RenameKey"
+};
+
+#define REG_EVENT_SUB_TYPE_STR(SubType) RegistryEventTypeStr[(int)SubType]
+
 
 struct RegistryEvent : EventHeader
 {
     ULONG Processid;
     ULONG ThreadId;
     RegistryEventType SubType;
-    ULONG KeyNameLength;
-    WCHAR KeyNameOffset;
+    AppendedEventBuffer KeyName;
+    AppendedEventBuffer ValueName;
+    AppendedEventBuffer ValueData;
+    AppendedEventBuffer NewName;
+
+    PWSTR GetKeyName()
+    {
+        return EVENT_GET_APPENDIX(this, KeyName, PWSTR);
+    }
+
+    PCWSTR GetKeyName() const
+    {
+        return EVENT_GET_APPENDIX(this, KeyName, PCWSTR);
+    }
+
+    PWSTR GetValueName()
+    {
+        return EVENT_GET_APPENDIX(this, ValueName, PWSTR);
+    }
+
+    PCWSTR GetValueName() const
+    {
+        return EVENT_GET_APPENDIX(this, ValueName, PCWSTR);
+    }
+
+    PWSTR GetValueData()
+    {
+        return EVENT_GET_APPENDIX(this, ValueData, PWSTR);
+    }
+
+    PCWSTR GetValueData() const
+    {
+        return EVENT_GET_APPENDIX(this, ValueData, PCWSTR);
+    }
+
+    PWSTR GetNewName()
+    {
+        return EVENT_GET_APPENDIX(this, NewName, PWSTR);
+    }
+
+    PCWSTR GetNewName() const
+    {
+        return EVENT_GET_APPENDIX(this, NewName, PCWSTR);
+    }
 };
 
 struct CircularBuffer 
@@ -108,3 +195,6 @@ struct CircularBuffer
     ULONG ResetOffset;
     HANDLE Event;
 };
+
+
+#undef EVENT_GET_APPENDIX

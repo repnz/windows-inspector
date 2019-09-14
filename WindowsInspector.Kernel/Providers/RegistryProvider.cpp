@@ -8,108 +8,352 @@ NTSTATUS RegistryCallback(PVOID CallbackContext, PVOID Argument1, PVOID Argument
 
 static LARGE_INTEGER g_RegistryCookie;
 
-NTSTATUS InitializeRegistryProvider()
+NTSTATUS 
+InitializeRegistryProvider()
 {
-    UNICODE_STRING altitude = RTL_CONSTANT_STRING(L"7657.124");
+    UNICODE_STRING Altitude = RTL_CONSTANT_STRING(L"7657.124");
     
-    NTSTATUS status = CmRegisterCallbackEx(RegistryCallback, &altitude, g_DriverObject, NULL, &g_RegistryCookie, NULL);
+    NTSTATUS Status = CmRegisterCallbackEx(RegistryCallback, &Altitude, g_DriverObject, NULL, &g_RegistryCookie, NULL);
     
-    if (!NT_SUCCESS(status))
-    {
-        D_ERROR_STATUS("Could not registry to registry callback: CmRegistryCallbackEx Failed", status);
-        return status;
-    }
-
-    return status;
-}
-
-void ReleaseRegistryProvider()
-{
-    CmUnRegisterCallback(g_RegistryCookie);
-}
-
-static 
-VOID
-InitializeCommonRegistryEvent(
-    _Out_ RegistryEvent* event, 
-    _In_ RegistryEventType eventType
-)
-{
-    event->Processid = HandleToUlong(PsGetCurrentProcessId());
-    event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    KeQuerySystemTimePrecise(&event->Time);
-    event->SubType = eventType;
-    event->Type = EventType::RegistryEvent;
-}
-
-NTSTATUS RegistryDeleteKeyCallback(RegistryEvent* SourceEvent, PREG_DELETE_KEY_INFORMATION DeleteKeyInformation) 
-{
-    NTSTATUS Status;
-    HANDLE RegistryKeyHandle = NULL;
-    BufferEvent BufferEvent;
-
-    if (DeleteKeyInformation == NULL || DeleteKeyInformation->Object == NULL)
-    {
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    Status = ObOpenObjectByPointer(DeleteKeyInformation->Object, OBJ_KERNEL_HANDLE, 0, KEY_QUERY_VALUE,
-        *CmKeyObjectType,
-        KernelMode,
-        &RegistryKeyHandle
-        );
-
-
     if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS_ARGS("Could not create handle to registry object: 0x%p", Status, DeleteKeyInformation->Object);
-        goto cleanup;
-    }
-
-    ULONG KeyLength;
-
-    Status = ZwQueryKey(RegistryKeyHandle, KeyNameInformation, NULL, 0, &KeyLength);
-
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS("Could not query key name of deleted key.", Status);
-        goto cleanup;
-    }
-
-
-    SourceEvent->Size = sizeof(RegistryEvent) + KeyLength;
-
-    Status = AllocateBufferEvent(&BufferEvent, SourceEvent->Size);
-
-    
-cleanup:
-    if (RegistryKeyHandle != NULL)
-    {
-        ZwClose(RegistryKeyHandle);
+        D_ERROR_STATUS("Could not registry to registry callback: CmRegistryCallbackEx Failed", Status);
+        return Status;
     }
 
     return Status;
 }
 
-NTSTATUS RegistryCallback(PVOID CallbackContext, PVOID Argument1, PVOID Argument2)
+VOID 
+ReleaseRegistryProvider()
+{
+    CmUnRegisterCallback(g_RegistryCookie);
+}
+
+static
+NTSTATUS
+SendRegistryEvent(
+    _In_ PVOID KeyObject,
+    _In_ RegistryEventType EventSubType,
+    _In_opt_ PCUNICODE_STRING ValueName,
+    _In_opt_ PVOID Data,
+    _In_ ULONG DataSize,
+    _In_opt_ PCUNICODE_STRING NewName
+)
+{
+    LARGE_INTEGER Time;
+    KeQuerySystemTimePrecise(&Time);
+
+    NTSTATUS Status;
+    BufferEvent BufferEvent;
+    HANDLE KeyHandle = NULL;
+    ULONG KeyLength = 0;
+    ULONG RegistryEventLength = sizeof(RegistryEvent);
+
+    if (KeyObject == NULL)
+    {
+        Status = STATUS_INVALID_PARAMETER;
+        goto cleanup;
+    }
+    
+    //
+    // Calculate the length of the registry event
+    //
+    Status = ObOpenObjectByPointer(KeyObject, OBJ_KERNEL_HANDLE, 0, KEY_QUERY_VALUE,
+        *CmKeyObjectType,
+        KernelMode,
+        &KeyHandle
+    );
+
+
+    if (!NT_SUCCESS(Status))
+    {
+        goto cleanup;
+    }
+
+    Status = ZwQueryKey(KeyHandle, KeyNameInformation, NULL, 0, &KeyLength);
+
+
+    if (!NT_SUCCESS(Status))
+    {
+        goto cleanup;
+    }
+
+    RegistryEventLength += KeyLength;
+    
+    
+    if (ValueName != NULL)
+    {
+        RegistryEventLength += ValueName->Length;
+    }
+
+    if (DataSize)
+    {
+        RegistryEventLength += DataSize;
+    }
+
+    if (NewName != NULL)
+    {
+        RegistryEventLength += NewName->Length;
+    }
+
+    //
+    // Allocate and initialize event
+    //
+    Status = AllocateBufferEvent(&BufferEvent, RegistryEventLength);
+
+    if (!NT_SUCCESS(Status))
+    {
+        goto cleanup;
+    }
+
+    auto Event = (RegistryEvent*)BufferEvent.Memory;
+
+    // Initialize Key Name
+
+    Event->KeyName.Offset = KeyLength;
+    Event->KeyName.Size = sizeof(RegistryEvent);
+
+    Status = ZwQueryKey(KeyHandle, KeyNameInformation, Event->GetKeyName(), KeyLength, NULL);
+
+    if (!NT_SUCCESS(Status))
+    {
+        goto cleanup;
+    }
+    
+    // Initialize Value Name
+
+    if (ValueName != NULL)
+    {
+        Event->ValueName.Offset = Event->KeyName.Offset + Event->KeyName.Size;
+        Event->ValueName.Size = ValueName->Length;
+        RtlCopyMemory(Event->GetValueName(), ValueName->Buffer, ValueName->Length);
+    }
+    else
+    {
+        Event->ValueName.Offset = 0;
+        Event->ValueName.Size = 0;
+    }
+
+    // Initialize Data
+
+    if (Data != NULL)
+    {
+        Event->ValueData.Offset = Event->ValueName.Offset + Event->ValueName.Size;
+        Event->ValueData.Size = DataSize;
+        RtlCopyMemory(Event->GetValueData(), Data, DataSize);
+    }
+    else
+    {
+        Event->ValueData.Offset = 0;
+        Event->ValueData.Size = 0;
+    }
+
+    // New Name in case of a rename
+    if (NewName != NULL)
+    {
+        Event->NewName.Offset = Event->ValueData.Offset + Event->ValueData.Size;
+        Event->NewName.Size = NewName->Length;
+        RtlCopyMemory(Event->GetNewName(), NewName->Buffer, NewName->Length);
+    }
+    else 
+    {
+        Event->NewName.Offset = 0;
+        Event->NewName.Size = 0;
+    }
+
+    Event->Processid = HandleToUlong(PsGetCurrentProcessId());
+    Event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    Event->Time = Time;
+    Event->SubType = EventSubType;
+    Event->Type = EventType::RegistryEvent;
+
+    SendBufferEvent(&BufferEvent);
+
+cleanup:
+    if (!NT_SUCCESS(Status))
+    {
+        D_ERROR_STATUS_ARGS("Could not send RegistryEvent of type %s", Status, REG_EVENT_SUB_TYPE_STR(EventSubType));
+    }
+
+    if (KeyHandle != NULL)
+    {
+        ObCloseHandle(KeyHandle, KernelMode);
+    }
+
+    return Status;
+}
+
+FORCEINLINE NTSTATUS
+DeleteKeyCallback(
+    _In_ PREG_DELETE_KEY_INFORMATION Information
+)
+{
+    if (
+        Information == NULL ||
+        Information->Object == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+
+    return SendRegistryEvent(
+        Information->Object,
+        RegistryEventType::DeleteKey,
+        NULL,
+        NULL,
+        0,
+        NULL
+    );
+}
+
+FORCEINLINE
+NTSTATUS
+SetValueKeyCallback(
+    _In_ PREG_SET_VALUE_KEY_INFORMATION Information
+)
+{
+    if (
+        Information == NULL ||
+        Information->Object == NULL ||
+        Information->ValueName == NULL ||
+        Information->Data == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+
+    return SendRegistryEvent(
+        Information->Object,
+        RegistryEventType::SetValue,
+        Information->ValueName,
+        Information->Data,
+        Information->DataSize,
+        NULL
+    );
+}
+
+FORCEINLINE
+NTSTATUS
+RenameKeyCallback(
+    _In_ PREG_RENAME_KEY_INFORMATION Information
+)
+{
+    if (
+        Information == NULL ||
+        Information->Object == NULL ||
+        Information->NewName == NULL
+        )
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+
+    return SendRegistryEvent(
+        Information->Object,
+        RegistryEventType::RenameKey,
+        NULL,
+        NULL,
+        0,
+        Information->NewName
+    );
+}
+
+FORCEINLINE
+NTSTATUS
+QueryValueKeyCallback(
+    _In_ PREG_QUERY_VALUE_KEY_INFORMATION Information
+)
+{
+    if (
+        Information == NULL ||
+        Information->Object == NULL ||
+        Information->ValueName == NULL
+        )
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+
+    return SendRegistryEvent(
+        Information->Object,
+        RegistryEventType::QueryValue,
+        Information->ValueName,
+        NULL,
+        0,
+        NULL
+    );
+}
+
+
+FORCEINLINE
+NTSTATUS
+DeleteValueKeyCallback(
+    _In_ PREG_DELETE_VALUE_KEY_INFORMATION Information
+)
+{
+    if (
+        Information == NULL ||
+        Information->Object == NULL ||
+        Information->ValueName == NULL
+        )
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+
+    return SendRegistryEvent(
+        Information->Object,
+        RegistryEventType::DeleteValue,
+        Information->ValueName,
+        NULL,
+        0,
+        NULL
+    );
+}
+
+NTSTATUS 
+RegistryCallback(
+    _In_ PVOID CallbackContext, 
+    _In_ PVOID Argument1, 
+    _In_ PVOID Argument2
+)
 {
     UNREFERENCED_PARAMETER(CallbackContext);
 
-    REG_NOTIFY_CLASS type = (REG_NOTIFY_CLASS)Argument1;
-    RegistryEvent event;
-    InitializeCommonRegistryEvent(&event);
-    NTSTATUS status;
-    BufferEvent BufferEvent;
+    ULONG* ArgumentUlong = (ULONG*)&Argument1;
+    REG_NOTIFY_CLASS TypeClass = (REG_NOTIFY_CLASS)*ArgumentUlong;
 
-    switch (type)
+    switch (TypeClass)
     {
         case RegNtPreDeleteKey:
         {
-            auto deleteKeyInformation = (PREG_DELETE_KEY_INFORMATION)(Argument2);
-            PVOID RegistryKeyObject = deleteKeyInformation->Object;
-
+            DeleteKeyCallback((PREG_DELETE_KEY_INFORMATION)(Argument2));
+            break;
+        }
+        case RegNtPreSetValueKey:
+        {
+            SetValueKeyCallback((PREG_SET_VALUE_KEY_INFORMATION)(Argument2));
+            break;
+        }
+        case RegNtPreRenameKey:
+        {
+            RenameKeyCallback((PREG_RENAME_KEY_INFORMATION)(Argument2));
+            break;
+        }
+        case RegNtPreDeleteValueKey:
+        {
+            DeleteValueKeyCallback((PREG_DELETE_VALUE_KEY_INFORMATION)(Argument2));
+        }
+        case RegNtPreQueryValueKey:
+        {
+            QueryValueKeyCallback((PREG_QUERY_VALUE_KEY_INFORMATION)(Argument2));
+            break;
         }
 
+        default:
+            break;
     }
 
+    return STATUS_SUCCESS;
 }

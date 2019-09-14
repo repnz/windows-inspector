@@ -210,6 +210,7 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DriverObject.cpp" />
     <ClCompile Include="EventBuffer.cpp" />
     <ClCompile Include="Ioctl.cpp" />
     <ClCompile Include="KernelApi.cpp" />
@@ -217,20 +218,22 @@
     <ClCompile Include="Providers\ImageLoadProvider.cpp" />
     <ClCompile Include="Providers\ProcessProvider.cpp" />
     <ClCompile Include="Providers\Providers.cpp" />
+    <ClCompile Include="Providers\RegistryProvider.cpp" />
     <ClCompile Include="Providers\ThreadProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.hpp" />
     <ClInclude Include="Debug.hpp" />
+    <ClInclude Include="DriverObject.hpp" />
     <ClInclude Include="EventBuffer.hpp" />
     <ClInclude Include="Ioctl.hpp" />
     <ClInclude Include="KernelApi.hpp" />
-    <ClInclude Include="Mem.hpp" />
     <ClInclude Include="Providers\ImageCallbacks.hpp" />
     <ClInclude Include="Providers\ImageLoadProvider.hpp" />
     <ClInclude Include="Providers\ProcessCreation.hpp" />
     <ClInclude Include="Providers\ProcessProvider.hpp" />
     <ClInclude Include="Providers\Providers.hpp" />
+    <ClInclude Include="Providers\RegistryProvider.hpp" />
     <ClInclude Include="Providers\ThreadCallbacks.hpp" />
     <ClInclude Include="Providers\ThreadProvider.hpp" />
   </ItemGroup>

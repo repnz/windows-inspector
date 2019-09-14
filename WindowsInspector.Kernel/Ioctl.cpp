@@ -19,12 +19,15 @@ NTSTATUS InspectorListen(PIRP Irp)
     if (!NT_SUCCESS(status))
     {
         D_ERROR_STATUS("Could not allocate event buffer", status);
+        return status;
     }
     else
     {
         // Return address to user mode
         Irp->IoStatus.Information = sizeof(ULONG_PTR);
     }
+
+    InitializeProviders();
 
     return STATUS_SUCCESS;
 }

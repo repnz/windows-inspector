@@ -73,7 +73,8 @@ void DumpTime(std::ostream& outputStream, const LARGE_INTEGER& time)
 		setw(3) << st.wMilliseconds;
 
 	outputStream << setfill(fillChar);
-}
+}
+
 
 void DumpCommonInformation(std::ostream& outputStream, const EventHeader& e, const std::string& itemName)
 {
@@ -113,7 +114,7 @@ void DumpProcessCreateEvent(std::ostream& outputStream, const ProcessCreateEvent
 		"CreatingThreadId=" << setw(5) << e.CreatingThreadId << columnSeperator <<
 		"ParentProcessId="   << setw(5) << e.ParentProcessId << columnSeperator <<
 		"NewProcessId="      << setw(5) << e.NewProcessId << columnSeperator <<
-		"CommandLine="       << WideToString(e.CommandLine, e.CommandLineLength) << columnSeperator <<
+		"CommandLine="       << WideToString(e.GetProcessCommandLine(), e.CommandLine.Size/2) << columnSeperator <<
 		std::endl;
 }
 
@@ -153,6 +154,6 @@ void DumpImageLoadEvent(std::ostream& outputStream, const ImageLoadEvent& e)
 		"LoadAddress=" << setw(16) << hex << e.LoadAddress << columnSeperator <<
 		"ImageSize=" << setw(16) << e.ImageSize << columnSeperator << dec <<
 		setfill(' ') <<
-		"ImageFileName=" << WideToString(e.ImageFileName, e.ImageFileNameLength) << columnSeperator <<
+		"ImageFileName=" << WideToString(e.GetImageFileName(), e.ImageFileName.Size/2) << columnSeperator <<
 		std::endl;
 }
