@@ -93,7 +93,7 @@ NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
 NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
-	NTSTATUS status;
+	NTSTATUS Status;
 
 	Irp->IoStatus.Information = 0;
 
@@ -103,14 +103,14 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
 
     if (IoControlCode == INSPECTOR_LISTEN_CTL_CODE)
     {
-        status = InspectorListen(Irp);
+        Status = InspectorListen(Irp, iosp);
     }
     else
     {
-        status = STATUS_INVALID_PARAMETER;
+        Status = STATUS_NOT_SUPPORTED;
     }
 
-	Irp->IoStatus.Status = status;
+	Irp->IoStatus.Status = Status;
 	IoCompleteRequest(Irp, 0);
-	return status;
+	return Status;
 }

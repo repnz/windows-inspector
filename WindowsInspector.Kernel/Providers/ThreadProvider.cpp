@@ -4,7 +4,11 @@
 #include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ThreadProvider.hpp"
 
-void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create);
+void OnThreadNotify(
+    _In_ HANDLE ProcessId, 
+    _In_ HANDLE ThreadId, 
+    _In_ BOOLEAN Create
+);
 
 NTSTATUS InitializeThreadProvider()
 {
@@ -16,21 +20,24 @@ void ReleaseThreadProvider()
     PsRemoveCreateThreadNotifyRoutine(OnThreadNotify);
 }
 
-NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32StartAddress)
+NTSTATUS GetThreadWin32StartAddress(
+    _In_ ULONG ThreadId, 
+    _Out_ PULONG_PTR Win32StartAddress
+)
 {
-    NTSTATUS status;
+    NTSTATUS Status;
     HANDLE CreatingThreadObjectHandle;
 
     PETHREAD thread;
-    status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &thread);
+    Status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &thread);
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS_ARGS("Failed to find thread with id %d", status, ThreadId);
-        return status;
+        D_ERROR_STATUS_ARGS("Failed to find thread with id %d", Status, ThreadId);
+        return Status;
     }
 
-    status = ObOpenObjectByPointer(
+    Status = ObOpenObjectByPointer(
         PsGetCurrentThread(),
         OBJ_KERNEL_HANDLE,
         NULL,
@@ -42,13 +49,13 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
 
     ObDereferenceObject(thread);
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Failed to create a handle to the new thread", status);
-        return status;
+        D_ERROR_STATUS("Failed to create a handle to the new thread", Status);
+        return Status;
     }
 
-    status = ZwQueryInformationThread(
+    Status = ZwQueryInformationThread(
         CreatingThreadObjectHandle,
         ThreadQuerySetWin32StartAddress,
         Win32StartAddress,
@@ -56,18 +63,19 @@ NTSTATUS GetThreadWin32StartAddress(_In_ ULONG ThreadId, _Out_ PULONG_PTR Win32S
         NULL
     );
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS_ARGS("Cannot query thread start address %d", status, ThreadId);
-        ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
-        return status;
+        D_ERROR_STATUS_ARGS("Cannot query thread start address %d", Status, ThreadId);
     }
 
     ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
-    return STATUS_SUCCESS;
+    return Status;
 }
 
-void OnThreadCreate(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId)
+void OnThreadCreate(
+    _In_ ULONG TargetProcessId, 
+    _In_ ULONG TargetThreadId
+)
 {
     
     ULONG_PTR StartAddress;
@@ -104,7 +112,10 @@ void OnThreadCreate(_In_ ULONG TargetProcessId, _In_ ULONG TargetThreadId)
 }
 
 
-void OnThreadExit(_In_ ULONG ProcessId, _In_ ULONG ThreadId)
+void OnThreadExit(
+    _In_ ULONG ProcessId, 
+    _In_ ULONG ThreadId
+)
 {
     BufferEvent event;
 

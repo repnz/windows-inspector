@@ -11,6 +11,7 @@ typedef enum _PROVIDER_STATE {
     ProviderStateRunning
 } PROVIDER_STATE;
 
+
 typedef struct _PROVIDER_DESCRIPTOR {
     NTSTATUS(*Start)();
     VOID(*Stop)();
@@ -51,7 +52,7 @@ CONST SIZE_T NumberOfProviders = sizeof(Providers) / sizeof(PROVIDER_DESCRIPTOR)
 NTSTATUS 
 InitializeProviders()
 {
-    NTSTATUS status = STATUS_SUCCESS;
+    NTSTATUS Status = STATUS_SUCCESS;
     
     for (ULONG i = 0; i < NumberOfProviders; i++)
     {
@@ -63,19 +64,21 @@ InitializeProviders()
         
         D_INFO_ARGS("Initializing Provider %ws", Providers[i].ProviderName);
 
-        status = Providers[i].Start();
+        Status = Providers[i].Start();
 
-        if (!NT_SUCCESS(status))
+        if (!NT_SUCCESS(Status))
         {
-            D_ERROR_STATUS_ARGS("Could not initialize provider \"%ws\"", status, Providers[i].ProviderName);
+            D_ERROR_STATUS_ARGS("Could not initialize provider \"%ws\"", Status, Providers[i].ProviderName);
             
             FreeProviders();
 
-            return status;
+            return Status;
         }
+
+        Providers[i].State = ProviderStateRunning;
     }
 
-    return status;
+    return Status;
 }
 
 VOID
@@ -86,6 +89,7 @@ FreeProviders()
         if (Providers[i].State == ProviderStateRunning)
         {
             Providers[i].Stop();
+            Providers[i].State = ProviderStateNotRunning;
         }
     }
     

@@ -10,8 +10,13 @@ NTSTATUS InitializeIoctlHandlers()
     return ZeroEventBuffer();
 }
 
-NTSTATUS InspectorListen(PIRP Irp)
+NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
 {
+    if (IoStackLocation->Parameters.DeviceIoControl.OutputBufferLength != sizeof(PVOID))
+    {
+        return STATUS_INVALID_BUFFER_SIZE;
+    }
+
     CircularBuffer** UserBaseAddressPtr = (CircularBuffer**)Irp->AssociatedIrp.SystemBuffer;
     
     NTSTATUS status = InitializeEventBuffer(UserBaseAddressPtr);

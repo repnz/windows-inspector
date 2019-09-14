@@ -3,7 +3,11 @@
 #include <WindowsInspector.Kernel/EventBuffer.hpp>
 #include "ImageLoadProvider.hpp"
 
-void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo);
+void OnImageLoadNotify(
+    _In_opt_ PUNICODE_STRING FullImageName, 
+    _In_ HANDLE ProcessId, 
+    _In_ PIMAGE_INFO ImageInfo
+);
 
 NTSTATUS InitializeImageLoadProvider()
 {
@@ -18,7 +22,11 @@ void ReleaseImageLoadProvider()
 const WCHAR Unknown[] = L"(Unknown)";
 ULONG UnknownSize = sizeof(Unknown);
 
-void OnImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName, _In_ HANDLE ProcessId, _In_ PIMAGE_INFO ImageInfo)
+void OnImageLoadNotify(
+    _In_opt_ PUNICODE_STRING FullImageName, 
+    _In_ HANDLE ProcessId, 
+    _In_ PIMAGE_INFO ImageInfo
+)
 {
     ULONG fullImageNameSize = 0;
     PCWSTR fullImageName;
