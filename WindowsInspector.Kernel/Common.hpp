@@ -33,14 +33,19 @@ const char* const EventTypeStr[] =
     "RegistryEvent"
 };
 
-#define EVENT_TYPE_STR(Type) EventTypeStr[(int)Type]
-
 
 struct EventHeader
 {
     EventType Type;
     USHORT Size;
     LARGE_INTEGER Time;
+    ULONG ProcessId;
+    ULONG ThreadId;
+
+    PCSTR GetEventName() const
+    {
+        return EventTypeStr[(int)Type];
+    }
 };
 
 struct AppendedEventBuffer
@@ -60,9 +65,7 @@ struct ProcessExitEvent : EventHeader
 struct ProcessCreateEvent : EventHeader
 {
     ULONG NewProcessId;
-    ULONG CreatingProcessId;
 	ULONG ParentProcessId;
-	ULONG CreatingThreadId;
     AppendedEventBuffer CommandLine;
 
     PWSTR GetProcessCommandLine()
@@ -78,8 +81,6 @@ struct ProcessCreateEvent : EventHeader
 
 struct ThreadCreateEvent : EventHeader 
 {
-	ULONG CreatingProcessId;
-	ULONG CreatingThreadId;
     ULONG NewThreadId;
     ULONG TargetProcessId;
 	ULONG_PTR StartAddress;
@@ -87,14 +88,10 @@ struct ThreadCreateEvent : EventHeader
 
 struct ThreadExitEvent : EventHeader
 {
-	ULONG ThreadId;
-	ULONG ProcessId;
 };
 
 struct ImageLoadEvent : EventHeader 
 {
-    ULONG ProcessId;
-	ULONG ThreadId;
     ULONG_PTR LoadAddress;
     ULONG_PTR ImageSize;
     AppendedEventBuffer ImageFileName;
@@ -126,58 +123,81 @@ const char* const RegistryEventTypeStr[] =
 {
     "DeleteKey",
     "SetValue",
-    "RenameKey"
+    "RenameKey",
+    "QueryValue",
+    "DeleteValue"
 };
 
 #define REG_EVENT_SUB_TYPE_STR(SubType) RegistryEventTypeStr[(int)SubType]
 
+const char* const RegistryValueDataTypeStr[] =
+{
+    "REG_NONE",
+    "REG_SZ",
+    "REG_EXPAND_SZ",
+    "REG_BINARY",
+    "REG_DWORD",
+    "REG_DWORD_BIG_ENDIAN",
+    "REG_LINK",
+    "REG_MULTI_SZ",
+    "REG_RESOURCE_LIST",
+    "REG_FULL_RESOURCE_DESCRIPTOR",
+    "REG_RESOURCE_REQUIREMENTS_LIST",
+    "REG_QWORD"
+};
+
+#define REG_VALUE_TYPE_STR(ValueType) RegistryValueDataTypeStr[(int)ValueType];
 
 struct RegistryEvent : EventHeader
 {
-    ULONG Processid;
-    ULONG ThreadId;
     RegistryEventType SubType;
     AppendedEventBuffer KeyName;
     AppendedEventBuffer ValueName;
     AppendedEventBuffer ValueData;
+    ULONG ValueType;
     AppendedEventBuffer NewName;
+    
+    FORCEINLINE PCSTR GetValueTypeName() const
+    {
+        return REG_VALUE_TYPE_STR(ValueType);
+    }
 
-    PWSTR GetKeyName()
+    FORCEINLINE PCSTR GetSubTypeString() const
+    {
+        return REG_EVENT_SUB_TYPE_STR(SubType);
+    }
+
+    FORCEINLINE PWSTR GetKeyName()
     {
         return EVENT_GET_APPENDIX(this, KeyName, PWSTR);
     }
 
-    PCWSTR GetKeyName() const
+    FORCEINLINE PCWSTR GetKeyName() const
     {
         return EVENT_GET_APPENDIX(this, KeyName, PCWSTR);
     }
 
-    PWSTR GetValueName()
+    FORCEINLINE PWSTR GetValueName()
     {
         return EVENT_GET_APPENDIX(this, ValueName, PWSTR);
     }
 
-    PCWSTR GetValueName() const
+    FORCEINLINE PCWSTR GetValueName() const
     {
         return EVENT_GET_APPENDIX(this, ValueName, PCWSTR);
     }
 
-    PWSTR GetValueData()
+    FORCEINLINE PVOID GetValueData() const
     {
-        return EVENT_GET_APPENDIX(this, ValueData, PWSTR);
+        return EVENT_GET_APPENDIX(this, ValueData, PVOID);
     }
 
-    PCWSTR GetValueData() const
-    {
-        return EVENT_GET_APPENDIX(this, ValueData, PCWSTR);
-    }
-
-    PWSTR GetNewName()
+    FORCEINLINE PWSTR GetNewName()
     {
         return EVENT_GET_APPENDIX(this, NewName, PWSTR);
     }
 
-    PCWSTR GetNewName() const
+    FORCEINLINE PCWSTR GetNewName() const
     {
         return EVENT_GET_APPENDIX(this, NewName, PCWSTR);
     }

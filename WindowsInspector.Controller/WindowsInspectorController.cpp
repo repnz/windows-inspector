@@ -9,10 +9,8 @@ static volatile bool Running = true;
 void WindowsInspectorController::Listen() 
 {
 	InspectorDriver driver;
-    CircularBuffer* buffer;
+    CircularBuffer* buffer = driver.Listen();
     
-    driver.Listen(&buffer);
-
 	while (Running)
 	{
         if (!buffer->Count)

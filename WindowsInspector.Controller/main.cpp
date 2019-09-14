@@ -35,11 +35,7 @@ int main(int argc, const char** argv)
 	}
 	catch (const args::Error& error) 
 	{
-		std::cerr <<
-			"Error parsing arguments: " <<
-			error.what() <<
-			"\n\n" << 
-			parser;
+		std::cerr << "Error parsing arguments: " << error.what() << "\n\n" << parser;
 		
 	}
 	catch (const std::exception& ex) 

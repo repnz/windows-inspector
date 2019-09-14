@@ -44,8 +44,8 @@ void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO Create
     KeQuerySystemTimePrecise(&info->Time);
     info->NewProcessId = HandleToUlong(ProcessId);
     info->ParentProcessId = HandleToUlong(CreateInfo->ParentProcessId);
-    info->CreatingProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
-    info->CreatingThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
+    info->ProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
+    info->ThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
     info->CommandLine.Size = CreateInfo->CommandLine->Length;
 
     RtlCopyMemory(

@@ -38,9 +38,11 @@ SendRegistryEvent(
     _In_opt_ PCUNICODE_STRING ValueName,
     _In_opt_ PVOID Data,
     _In_ ULONG DataSize,
-    _In_opt_ PCUNICODE_STRING NewName
+    _In_opt_ PCUNICODE_STRING NewName,
+    _In_opt_ ULONG ValueType
 )
 {
+    
     LARGE_INTEGER Time;
     KeQuerySystemTimePrecise(&Time);
 
@@ -162,7 +164,8 @@ SendRegistryEvent(
         Event->NewName.Size = 0;
     }
 
-    Event->Processid = HandleToUlong(PsGetCurrentProcessId());
+    Event->ValueType = ValueType;
+    Event->ProcessId = HandleToUlong(PsGetCurrentProcessId());
     Event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
     Event->Time = Time;
     Event->SubType = EventSubType;
@@ -203,7 +206,8 @@ DeleteKeyCallback(
         NULL,
         NULL,
         0,
-        NULL
+        NULL,
+        0
     );
 }
 
@@ -229,7 +233,8 @@ SetValueKeyCallback(
         Information->ValueName,
         Information->Data,
         Information->DataSize,
-        NULL
+        NULL,
+        Information->Type
     );
 }
 
@@ -255,7 +260,8 @@ RenameKeyCallback(
         NULL,
         NULL,
         0,
-        Information->NewName
+        Information->NewName,
+        0
     );
 }
 
@@ -281,7 +287,8 @@ QueryValueKeyCallback(
         Information->ValueName,
         NULL,
         0,
-        NULL
+        NULL,
+        0
     );
 }
 
@@ -308,7 +315,8 @@ DeleteValueKeyCallback(
         Information->ValueName,
         NULL,
         0,
-        NULL
+        NULL,
+        0
     );
 }
 

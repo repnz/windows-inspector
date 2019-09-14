@@ -103,8 +103,8 @@ void OnThreadCreate(
     info->Type = EventType::ThreadCreate;
     KeQuerySystemTimePrecise(&info->Time);
 
-    info->CreatingProcessId = HandleToUlong(PsGetCurrentProcessId());
-    info->CreatingThreadId = HandleToUlong(PsGetCurrentThreadId());
+    info->ProcessId = HandleToUlong(PsGetCurrentProcessId());
+    info->ThreadId = HandleToUlong(PsGetCurrentThreadId());
     info->NewThreadId = TargetThreadId;
     info->TargetProcessId = TargetProcessId;
 
