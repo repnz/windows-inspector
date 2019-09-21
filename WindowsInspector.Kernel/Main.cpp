@@ -16,13 +16,13 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_S
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
     
-    D_INFO("DriverEntry");
+    D_INFO("Driver Is Starting!");
     D_INFO("Initializing Kernel API...");
 
-	if (!KernelApiInitialize()) 
+	if (!NT_SUCCESS(KernelApiInitialize()))
 	{
 		D_ERROR("Could not initialize kernel API");
-		return STATUS_INVALID_ADDRESS;
+		return STATUS_NOT_SUPPORTED;
 	}
     
 	NTSTATUS status = STATUS_SUCCESS;

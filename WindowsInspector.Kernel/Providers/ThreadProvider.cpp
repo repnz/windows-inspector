@@ -88,9 +88,9 @@ void OnThreadCreate(
         return;
     }
 
-    BufferEvent event;
+    ThreadCreateEvent* Event;
 
-    status = AllocateBufferEvent(&event, sizeof(ThreadCreateEvent));
+    status = AllocateBufferEvent(&Event, sizeof(ThreadCreateEvent));
 
     if (!NT_SUCCESS(status))
     {
@@ -98,17 +98,16 @@ void OnThreadCreate(
         return;
     }
 
-    ThreadCreateEvent* info = (ThreadCreateEvent*)event.Memory;
-    info->Size = sizeof(ThreadCreateEvent);
-    info->Type = EventType::ThreadCreate;
-    KeQuerySystemTimePrecise(&info->Time);
+    Event->Size = sizeof(ThreadCreateEvent);
+    Event->Type = EventType::ThreadCreate;
+    KeQuerySystemTimePrecise(&Event->Time);
 
-    info->ProcessId = HandleToUlong(PsGetCurrentProcessId());
-    info->ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    info->NewThreadId = TargetThreadId;
-    info->TargetProcessId = TargetProcessId;
+    Event->ProcessId = HandleToUlong(PsGetCurrentProcessId());
+    Event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    Event->NewThreadId = TargetThreadId;
+    Event->TargetProcessId = TargetProcessId;
 
-    SendBufferEvent(&event);
+    SendBufferEvent(Event);
 }
 
 
@@ -117,9 +116,9 @@ void OnThreadExit(
     _In_ ULONG ThreadId
 )
 {
-    BufferEvent event;
+    ThreadExitEvent* Event;
 
-    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ThreadExitEvent));
+    NTSTATUS status = AllocateBufferEvent(&Event, sizeof(ThreadExitEvent));
 
     if (!NT_SUCCESS(status))
     {
@@ -127,15 +126,13 @@ void OnThreadExit(
         return;
     }
 
-    ThreadExitEvent* info = (ThreadExitEvent*)event.Memory;
+    Event->Size = sizeof(ThreadExitEvent);
+    Event->Type = EventType::ThreadExit;
+    KeQuerySystemTimePrecise(&Event->Time);
+    Event->ThreadId = ThreadId;
+    Event->ProcessId = ProcessId;
 
-    info->Size = sizeof(ThreadExitEvent);
-    info->Type = EventType::ThreadExit;
-    KeQuerySystemTimePrecise(&info->Time);
-    info->ThreadId = ThreadId;
-    info->ProcessId = ProcessId;
-
-    SendBufferEvent(&event);
+    SendBufferEvent(Event);
 }
 
 void OnThreadNotify(_In_ HANDLE ProcessId, _In_ HANDLE ThreadId, _In_ BOOLEAN Create)

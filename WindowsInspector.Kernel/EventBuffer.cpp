@@ -1,27 +1,82 @@
 #include "EventBuffer.hpp"
 #include "Common.hpp"
 #include "Debug.hpp"
+#include <WindowsInspector.Kernel/KernelApi.hpp>
 
+// 20 mb
 const SIZE_T BUFFER_SIZE = 20 * 1024 * 1024;
+
+// 78 kb
+const SIZE_T POINTER_BUFFER_SIZE = 10 * 1000 * sizeof(ULONG_PTR);
+
+// 20891520 bytes 
+const SIZE_T HEAP_SIZE = BUFFER_SIZE - sizeof(CircularBuffer) - POINTER_BUFFER_SIZE;
 
 static struct _KernelMappedBuffer {
     PMDL Mdl;
-    PVOID KernelMemory;
-    PVOID UserModeMemory;
-    CircularBuffer* CircularBuffer;
+    
+    union {
+        // Kernel addresses base pointers
+        PVOID KernelModeBase;
+        CircularBuffer* CircularBuffer;  
+    };
+
+    ULONG ClientProcessId;
+    PVOID UserModeBase;
     LONG IsMapped;
     KEVENT EventObject;
-    FAST_MUTEX BufferWriterMutex;
-    ULONG BufferSize;
-} KernelMappedBuffer;
+    SIZE_T BufferSize;
+    LONG LastPadding;
+    FAST_MUTEX HeapWriterMutex;
+    FAST_MUTEX PointerWriterMutex;
+    ULONG HeapOffset;
+
+} g_Sync;
+
+
+
+const SIZE_T POINTER_BUFFER_OFFSET = sizeof(CircularBuffer);
+const SIZE_T HEAP_OFFSET = POINTER_BUFFER_OFFSET + POINTER_BUFFER_SIZE;
 
 NTSTATUS ZeroEventBuffer()
 {
-    KernelMappedBuffer = { 0 };
+    g_Sync = { 0 };
 
     return STATUS_SUCCESS;
 }
 
+NTSTATUS FreeEventBuffer()
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    HANDLE ProcessHandle = NULL;
+
+    if (!g_Sync.IsMapped)
+    {
+        return STATUS_SUCCESS;
+    }
+
+    MmUnlockPages(g_Sync.Mdl);
+    IoFreeMdl(g_Sync.Mdl);
+    
+    Status = GetProcessHandleById(g_Sync.ClientProcessId, &ProcessHandle);
+    
+    if (!NT_SUCCESS(Status))
+    {
+        D_ERROR_STATUS_ARGS("Could not get a handle to process %d to free allocation", Status, g_Sync.ClientProcessId);
+        return Status;
+    }
+
+    Status = ZwFreeVirtualMemory(ProcessHandle, &g_Sync.UserModeBase, NULL, MEM_RELEASE);
+
+    if (!NT_SUCCESS(Status))
+    {
+        D_ERROR_STATUS("ZwFreeVirtualMemory failed to free allocation.", Status);
+    }
+
+    ObCloseHandle(ProcessHandle, KernelMode);
+    return Status;
+
+}
 
 NTSTATUS MapUserModeAddressToSystemSpace(_In_ PVOID Buffer, _In_ ULONG Length, _In_ LOCK_OPERATION Operation,
     _Out_ PMDL* OutputMdl, _Out_ PVOID* MappedBuffer) {
@@ -74,91 +129,174 @@ NTSTATUS MapUserModeAddressToSystemSpace(_In_ PVOID Buffer, _In_ ULONG Length, _
 
 NTSTATUS InitializeEventBuffer(CircularBuffer ** CircularBufferAddress)
 {
+    NTSTATUS Status = STATUS_SUCCESS;
+    BOOLEAN AllocatedUserModeMemory = FALSE;
+    BOOLEAN MappedUserModeMemory = FALSE;
+    g_Sync.BufferSize = BUFFER_SIZE;
+
     if (CircularBufferAddress == NULL)
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    if (KernelMappedBuffer.IsMapped || BitTestAndSet(&KernelMappedBuffer.IsMapped, 0))
+    if (g_Sync.IsMapped)
     {
         // Already mapped. 
         return STATUS_ALREADY_INITIALIZED;
     }
+    
+    g_Sync.ClientProcessId = HandleToUlong(PsGetCurrentProcessId());
 
-    SIZE_T AllocationSize = BUFFER_SIZE;
-    PVOID UserBaseAddress = NULL;
+    D_INFO("ZwAllocateVirtualMemory: Allocating event buffer...");
 
     // Allocate pages for buffer
-    NTSTATUS status = ZwAllocateVirtualMemory(NtCurrentProcess(), &UserBaseAddress, 0, &AllocationSize,
-        MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    Status = ZwAllocateVirtualMemory(
+        NtCurrentProcess(),
+        &g_Sync.UserModeBase, 
+        0, 
+        &g_Sync.BufferSize,
+        MEM_RESERVE | MEM_COMMIT, 
+        PAGE_READWRITE
+    );
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Could not allocate communication buffer", status);
-        KernelMappedBuffer.IsMapped = 0;
-        return status;
+        D_ERROR_STATUS("Could not allocate communication buffer", Status);
+        goto cleanup;
     }
 
-    PMDL mdl;
-    PVOID kernelMemory;
+    AllocatedUserModeMemory = TRUE;
+    D_INFO_ARGS("Event buffer allocated! UserModeBase=0x%p", g_Sync.UserModeBase);
+    D_INFO("Mapping EventBuffer to system space...");
 
-    status = MapUserModeAddressToSystemSpace(UserBaseAddress, (ULONG)AllocationSize, IoWriteAccess, &mdl, &kernelMemory);
+    Status = MapUserModeAddressToSystemSpace(
+        g_Sync.UserModeBase,
+        BUFFER_SIZE,
+        IoWriteAccess, 
+        &g_Sync.Mdl, 
+        &g_Sync.KernelModeBase
+    );
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Could not map circular buffer address to system space", status);
-        KernelMappedBuffer.IsMapped = 0;
-        ZwFreeVirtualMemory(NtCurrentProcess(), &UserBaseAddress, NULL, MEM_RELEASE);
-        return status;
+        D_ERROR_STATUS("Could not map circular buffer address to system space", Status);
+        goto cleanup;
     }
+    
+    D_INFO_ARGS("EventBuffer mapped to system space at 0x%p", g_Sync.KernelModeBase);
 
+    MappedUserModeMemory = TRUE;
 
-    CircularBuffer* buffer = (CircularBuffer*)kernelMemory;
+    g_Sync.CircularBuffer->Count = 0;
+    g_Sync.CircularBuffer->BaseAddress = (PCHAR)g_Sync.UserModeBase + POINTER_BUFFER_OFFSET;
 
-    buffer->Count = 0;
-    buffer->BaseAddress = (PCHAR)UserBaseAddress + sizeof(CircularBuffer);
+    D_INFO("Creating NotificationEvent...");
 
     OBJECT_ATTRIBUTES attr;
     InitializeObjectAttributes(&attr, NULL, 0, NULL, NULL);
 
-    status = ZwCreateEvent(&buffer->Event, EVENT_ALL_ACCESS, &attr, SynchronizationEvent, FALSE);
+    Status = ZwCreateEvent(&g_Sync.CircularBuffer->Event, EVENT_ALL_ACCESS, &attr, NotificationEvent, FALSE);
 
-    if (!NT_SUCCESS(status))
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Could not create event for user-kernel communication", status);
-
-        MmUnlockPages(mdl);
-        IoFreeMdl(mdl);
-        ZwFreeVirtualMemory(NtCurrentProcess(), &UserBaseAddress, NULL, MEM_RELEASE);
-        KernelMappedBuffer.IsMapped = 0;
-        return status;
+        D_ERROR_STATUS("Could not create event for user-kernel communication", Status);
+        goto cleanup;
     }
 
-    buffer->ResetOffset = BUFFER_SIZE - (1024 * 1024);
-    buffer->HeadOffset = 0;
-    buffer->TailOffset = 0;
+    g_Sync.CircularBuffer->WriteOffset = 0;
+    g_Sync.CircularBuffer->ReadOffset = 0;
+    g_Sync.CircularBuffer->BufferSize = POINTER_BUFFER_SIZE;
+
+    D_INFO("Initializing Mutex Objects..");
+
+    ExInitializeFastMutex(&g_Sync.HeapWriterMutex);
+    ExInitializeFastMutex(&g_Sync.PointerWriterMutex);
 
 
-    KernelMappedBuffer.Mdl = mdl;
-    KernelMappedBuffer.KernelMemory = (PCHAR)kernelMemory + sizeof(CircularBuffer);
-    KernelMappedBuffer.UserModeMemory = UserBaseAddress;
-    KernelMappedBuffer.CircularBuffer = (CircularBuffer*)kernelMemory;
-    KernelMappedBuffer.BufferSize = (ULONG)AllocationSize;
+cleanup:
+    if (!NT_SUCCESS(Status))
+    {   
+        if (MappedUserModeMemory)
+        {
+            MmUnlockPages(g_Sync.Mdl);
+            IoFreeMdl(g_Sync.Mdl);
+        }
 
-    ExInitializeFastMutex(&KernelMappedBuffer.BufferWriterMutex);
+        if (AllocatedUserModeMemory)
+        {
+            ZwFreeVirtualMemory(NtCurrentProcess(), &g_Sync.UserModeBase, NULL, MEM_RELEASE);
+        }
 
-    *CircularBufferAddress = (CircularBuffer*)UserBaseAddress;
-    return STATUS_SUCCESS;
+        g_Sync = { 0 };
+        
+    }
+    else
+    {
+        //
+        // Return the base address to the caller
+        //
+        *CircularBufferAddress = (CircularBuffer*)g_Sync.UserModeBase;
+    }
+
+    return Status;
 }
 
-NTSTATUS WaitForEvents()
+NTSTATUS AllocateBufferEvent(PVOID Event, USHORT EventSize)
 {
     
+    NTSTATUS Status = STATUS_SUCCESS;
+    BOOLEAN MutexAcquired = FALSE;
+
+    if (!g_Sync.IsMapped)
+    {
+        Status = STATUS_UNSUCCESSFUL;
+        goto cleanup;
+    }
+
+    if (Event == NULL)
+    {
+        Status = STATUS_INVALID_PARAMETER;
+        goto cleanup;
+    }
+
+    EventHeader** EventPtr = (EventHeader * *)Event;
+
+    ExAcquireFastMutex(&g_Sync.HeapWriterMutex);
+    MutexAcquired = TRUE;
+
+    if (g_Sync.CircularBuffer->MemoryLeft < EventSize)
+    {
+        Status = STATUS_INSUFFICIENT_RESOURCES;
+        goto cleanup;
+    }
+    
+    LONG Left = HEAP_SIZE - g_Sync.HeapOffset;
+
+    if (Left < EventSize)
+    {
+        InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, g_Sync.LastPadding - Left);
+        g_Sync.LastPadding = Left;
+        g_Sync.HeapOffset = 0;
+    }
+    
+    *EventPtr = (EventHeader*)((PUCHAR)g_Sync.KernelModeBase + g_Sync.HeapOffset);
+    (*EventPtr)->Size = EventSize;
+    
+    g_Sync.HeapOffset += EventSize;
+
+cleanup:
+    if (MutexAcquired)
+    {
+        ExReleaseFastMutex(&g_Sync.HeapWriterMutex);
+    }
+
+    
+    return Status;
 }
 
-NTSTATUS AllocateBufferEvent(BufferEvent* Event, ULONG EventSize)
+NTSTATUS SendBufferEvent(EventHeader* Event)
 {
-    if (!KernelMappedBuffer.IsMapped)
+    if (!g_Sync.IsMapped)
     {
         return STATUS_UNSUCCESSFUL;
     }
@@ -167,103 +305,68 @@ NTSTATUS AllocateBufferEvent(BufferEvent* Event, ULONG EventSize)
     {
         return STATUS_INVALID_PARAMETER;
     }
+    
+    NTSTATUS Status = STATUS_SUCCESS;
 
-    ExAcquireFastMutex(&KernelMappedBuffer.BufferWriterMutex);
+    ExAcquireFastMutex(&g_Sync.PointerWriterMutex);
 
-    CircularBuffer* buf = KernelMappedBuffer.CircularBuffer;
+    ULONG WriteOffset = g_Sync.CircularBuffer->WriteOffset;
+    ULONG ReadOffset = g_Sync.CircularBuffer->ReadOffset;
+    
+    
+    // We have to check if it's empty
+    // It can be one of two options:
+    // 1. Tail is writing very fast and it reached HeadOffset
+    // 2. Head is reading very fast and it reached TailOffset
+    // We can check how many events there are in the buffer to verify the state:
 
-    ULONG HeadOffset = buf->HeadOffset;
-    ULONG TailOffset = buf->TailOffset;
-
-    if (HeadOffset < TailOffset)
+    if (WriteOffset == ReadOffset && g_Sync.CircularBuffer->Count > 0)
     {
-        // Head is behind! That means we have to check until the end of entire the buffer;
-        if ((KernelMappedBuffer.BufferSize - TailOffset) >= EventSize)
-        {
-            // Good! we have space for the event.
-            goto finish_allocate;
-        }
-        else
-        {
-            // Haa.. we can try to reset the TailOffset to the beginning:
-            TailOffset = 0;
-        }
+        Status = STATUS_INSUFFICIENT_RESOURCES;
+        goto cleanup;
     }
 
-    if (HeadOffset > TailOffset)
+    KeSetEvent(&g_Sync.EventObject, 0, FALSE);
+
+    ULONG EventHeapOffset = (ULONG)((PUCHAR)Event - (PUCHAR)g_Sync.KernelModeBase);
+       
+    
+    PVOID* QueuePointer = (PVOID*)((PCHAR)g_Sync.KernelModeBase + POINTER_BUFFER_OFFSET + WriteOffset);
+    
+    *QueuePointer = (PUCHAR)g_Sync.UserModeBase + HEAP_OFFSET + EventHeapOffset;
+
+    // Point to the next pointer to write
+    WriteOffset += sizeof(PVOID);
+
+    if (WriteOffset == POINTER_BUFFER_SIZE)
     {
-        if ((HeadOffset - TailOffset) >= EventSize)
-        {
-            // Good! We have space for the event.
-            // The HeadOffset may even got further, but we don't care because we still have space
-            goto finish_allocate;
-        }
-        else
-        {
-            // We have no space for the event! what to do..?
-            // We may just drop the event.
-            ExReleaseFastMutex(&KernelMappedBuffer.BufferWriterMutex);
-            return STATUS_INSUFFICIENT_RESOURCES;
-        }
+        WriteOffset = 0;
     }
 
-    if (HeadOffset == TailOffset)
+    g_Sync.CircularBuffer->WriteOffset = WriteOffset;
+
+cleanup:
+    
+    if (NT_SUCCESS(Status))
     {
-        // It can be one of two options:
-        // 1. Tail is writing very fast and it reached HeadOffset
-        // 2. Head is reading very fast and it reached TailOffset
-        // We can check how many events there are in the buffer to verify the state:
-        if (buf->Count == 0)
-        {
-            // Yay! we have space. Head is pretty fast:)
-            // That will happen alot. Mostly if there is one moment of silence
-            goto finish_allocate;
-        }
-        else
-        {
-            ExReleaseFastMutex(&KernelMappedBuffer.BufferWriterMutex);
-            return STATUS_INSUFFICIENT_RESOURCES;
-        }
+        InterlockedIncrement(&g_Sync.CircularBuffer->Count);
     }
-
-
-finish_allocate:
-    TailOffset += EventSize;
-    Event->Memory = (PVOID)((PCHAR)KernelMappedBuffer.KernelMemory + TailOffset);
-
-    if (TailOffset > buf->ResetOffset)
-    {
-        // We need to set it to zero because it passed the ResetOffset
-        TailOffset = 0;
-    }
-
-    Event->NewTail = TailOffset;
-
-    // Keep the mutex.
-    return STATUS_SUCCESS;
-
+    
+    ExReleaseFastMutex(&g_Sync.PointerWriterMutex);
+    return Status;
 }
 
-NTSTATUS SendBufferEvent(BufferEvent* EventMemory)
+NTSTATUS CancelBufferEvent(EventHeader* Event)
 {
-    if (EventMemory == NULL)
+    if (!g_Sync.IsMapped)
     {
-        return STATUS_INVALID_PARAMETER;
+        return STATUS_UNSUCCESSFUL;
     }
-
-    KernelMappedBuffer.CircularBuffer->TailOffset = EventMemory->NewTail;
-    InterlockedIncrement(&KernelMappedBuffer.CircularBuffer->Count);
-    ExReleaseFastMutex(&KernelMappedBuffer.BufferWriterMutex);
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS CancelBufferEvent(BufferEvent* Event)
-{
     if (Event == NULL)
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    ExReleaseFastMutex(&KernelMappedBuffer.BufferWriterMutex);
+    InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, Event->Size);
     return STATUS_SUCCESS;
 }

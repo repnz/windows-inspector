@@ -17,7 +17,7 @@ InitializeRegistryProvider()
     
     if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Could not registry to registry callback: CmRegistryCallbackEx Failed", Status);
+        D_ERROR_STATUS("Could not register to registry callback: CmRegistryCallbackEx Failed", Status);
         return Status;
     }
 
@@ -47,10 +47,10 @@ SendRegistryEvent(
     KeQuerySystemTimePrecise(&Time);
 
     NTSTATUS Status;
-    BufferEvent BufferEvent;
     HANDLE KeyHandle = NULL;
     ULONG KeyLength = 0;
-    ULONG RegistryEventLength = sizeof(RegistryEvent);
+    USHORT RegistryEventLength = sizeof(RegistryEvent);
+    RegistryEvent* Event;
 
     if (KeyObject == NULL)
     {
@@ -81,7 +81,7 @@ SendRegistryEvent(
         goto cleanup;
     }
 
-    RegistryEventLength += KeyLength;
+    RegistryEventLength += (USHORT)KeyLength;
     
     
     if (ValueName != NULL)
@@ -91,7 +91,7 @@ SendRegistryEvent(
 
     if (DataSize)
     {
-        RegistryEventLength += DataSize;
+        RegistryEventLength += (USHORT)DataSize;
     }
 
     if (NewName != NULL)
@@ -102,14 +102,12 @@ SendRegistryEvent(
     //
     // Allocate and initialize event
     //
-    Status = AllocateBufferEvent(&BufferEvent, RegistryEventLength);
+    Status = AllocateBufferEvent(&Event, RegistryEventLength);
 
     if (!NT_SUCCESS(Status))
     {
         goto cleanup;
     }
-
-    auto Event = (RegistryEvent*)BufferEvent.Memory;
 
     // Initialize Key Name
 
@@ -171,7 +169,7 @@ SendRegistryEvent(
     Event->SubType = EventSubType;
     Event->Type = EventType::RegistryEvent;
 
-    SendBufferEvent(&BufferEvent);
+    SendBufferEvent(Event);
 
 cleanup:
     if (!NT_SUCCESS(Status))

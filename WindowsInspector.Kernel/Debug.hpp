@@ -3,13 +3,13 @@
 
 // Debugging Macros
 
-#define DRIVER_PREFIX "WindowsInspector: '%s':%s:%d"
+#define DRIVER_PREFIX "WindowsInspector: (%s:%d):   "
 
 #define _D(Level, Fmt) \
-    KdPrintEx((DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, DRIVER_PREFIX Fmt "\n", __FILE__, __FUNCTION__, __LINE__))
+    KdPrintEx((DPFLTR_IHVDRIVER_ID, Level, DRIVER_PREFIX Fmt "\n", __FUNCTION__, __LINE__))
 
 #define _D_ARGS(Level, Fmt, ...) \
-    KdPrintEx((DPFLTR_IHVDRIVER_ID, Level, DRIVER_PREFIX Fmt "\n", __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__))
+    KdPrintEx((DPFLTR_IHVDRIVER_ID, Level, DRIVER_PREFIX Fmt "\n", __FUNCTION__, __LINE__, __VA_ARGS__))
 
 #define D_INFO(Fmt) \
     _D(DPFLTR_INFO_LEVEL, Fmt)

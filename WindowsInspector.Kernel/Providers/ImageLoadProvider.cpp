@@ -41,10 +41,9 @@ void OnImageLoadNotify(
         fullImageName = Unknown;
         fullImageNameSize = UnknownSize;
     }
-
-    BufferEvent event;
-
-    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ImageLoadEvent) + fullImageNameSize);
+    
+    ImageLoadEvent* event;
+    NTSTATUS status = AllocateBufferEvent(&event, sizeof(ImageLoadEvent) + (USHORT)fullImageNameSize);
 
     if (!NT_SUCCESS(status))
     {
@@ -52,18 +51,15 @@ void OnImageLoadNotify(
         return;
     }
 
-    ImageLoadEvent* info = (ImageLoadEvent*)event.Memory;
-
-    info->ImageFileName.Size = fullImageNameSize;
-    RtlCopyMemory(info->GetImageFileName(), fullImageName, fullImageNameSize);
+    event->ImageFileName.Size = fullImageNameSize;
+    RtlCopyMemory(event->GetImageFileName(), fullImageName, fullImageNameSize);
     
-    info->ImageSize = ImageInfo->ImageSize;
-    info->ProcessId = HandleToUlong(ProcessId);
-    info->LoadAddress = (ULONG_PTR)ImageInfo->ImageBase;
-    info->ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    info->Size = sizeof(ImageLoadEvent) + (USHORT)fullImageNameSize;
-    info->Type = EventType::ImageLoad;
-    KeQuerySystemTimePrecise(&info->Time);
+    event->ImageSize = ImageInfo->ImageSize;
+    event->ProcessId = HandleToUlong(ProcessId);
+    event->LoadAddress = (ULONG_PTR)ImageInfo->ImageBase;
+    event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    event->Type = EventType::ImageLoad;
+    KeQuerySystemTimePrecise(&event->Time);
 
-    SendBufferEvent(&event);
+    SendBufferEvent(event);
 }

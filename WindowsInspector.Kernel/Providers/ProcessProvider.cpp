@@ -1,4 +1,3 @@
-#include "ProcessProvider.hpp"
 #include <WindowsInspector.Kernel/Common.hpp>
 #include <WindowsInspector.Kernel/Debug.hpp>
 #include <WindowsInspector.Kernel/EventBuffer.hpp>
@@ -26,9 +25,8 @@ void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO Create
         D_ERROR("Failed to log ProcessCreateInfo: CommandLine is NULL");
         return;
     }
-
-    BufferEvent event;
     
+    ProcessCreateEvent* event;
     NTSTATUS status = AllocateBufferEvent(&event, sizeof(ProcessCreateEvent) + CreateInfo->CommandLine->Length);
     
     if (!NT_SUCCESS(status))
@@ -37,30 +35,27 @@ void OnProcessStart(_In_ HANDLE ProcessId, _Inout_ PPS_CREATE_NOTIFY_INFO Create
         return;
     }
 
-    ProcessCreateEvent* info = (ProcessCreateEvent*)event.Memory;
-
-    info->Type = EventType::ProcessCreate;
-    info->Size = sizeof(ProcessCreateEvent) + CreateInfo->CommandLine->Length;
-    KeQuerySystemTimePrecise(&info->Time);
-    info->NewProcessId = HandleToUlong(ProcessId);
-    info->ParentProcessId = HandleToUlong(CreateInfo->ParentProcessId);
-    info->ProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
-    info->ThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
-    info->CommandLine.Size = CreateInfo->CommandLine->Length;
+    event->Type = EventType::ProcessCreate;
+    event->Size = sizeof(ProcessCreateEvent) + CreateInfo->CommandLine->Length;
+    KeQuerySystemTimePrecise(&event->Time);
+    event->NewProcessId = HandleToUlong(ProcessId);
+    event->ParentProcessId = HandleToUlong(CreateInfo->ParentProcessId);
+    event->ProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
+    event->ThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
+    event->CommandLine.Size = CreateInfo->CommandLine->Length;
 
     RtlCopyMemory(
-        info->GetProcessCommandLine(),
+        event->GetProcessCommandLine(),
         CreateInfo->CommandLine->Buffer,
         CreateInfo->CommandLine->Length
     );
 
-    SendBufferEvent(&event);
+    SendBufferEvent(event);
 }
 
 void OnProcessExit(_In_ HANDLE ProcessId)
 {
-
-    BufferEvent event;
+    ProcessExitEvent* event;
     NTSTATUS status = AllocateBufferEvent(&event, sizeof(ProcessExitEvent*));
 
     if (!NT_SUCCESS(status))
@@ -69,13 +64,12 @@ void OnProcessExit(_In_ HANDLE ProcessId)
         return;
     }
 
-    ProcessExitEvent* info = (ProcessExitEvent*)event.Memory;
-    info->Type = EventType::ProcessExit;
-    info->Size = sizeof(ProcessExitEvent);
-    KeQuerySystemTimePrecise(&info->Time);
-    info->ProcessId = HandleToUlong(ProcessId);
-
-    SendBufferEvent(&event);
+    event->Type = EventType::ProcessExit;
+    event->Size = sizeof(ProcessExitEvent);
+    KeQuerySystemTimePrecise(&event->Time);
+    event->ProcessId = HandleToUlong(ProcessId);
+    event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    SendBufferEvent(event);
 }
 
 void OnProcessNotify(_Inout_ PEPROCESS ProcessObject, _In_ HANDLE ProcessId, _Inout_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)

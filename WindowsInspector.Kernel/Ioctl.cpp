@@ -12,34 +12,47 @@ NTSTATUS InitializeIoctlHandlers()
 
 NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
 {
+    D_INFO("Got IOCTL to listen to events.");
+
+    CircularBuffer** UserBaseAddressPtr = NULL;
+    NTSTATUS Status = STATUS_SUCCESS;
+
     if (IoStackLocation->Parameters.DeviceIoControl.OutputBufferLength != sizeof(PVOID))
     {
         return STATUS_INVALID_BUFFER_SIZE;
     }
 
-    CircularBuffer** UserBaseAddressPtr = (CircularBuffer**)Irp->AssociatedIrp.SystemBuffer;
+    UserBaseAddressPtr = (CircularBuffer**)Irp->AssociatedIrp.SystemBuffer;
     
-    NTSTATUS status = InitializeEventBuffer(UserBaseAddressPtr);
+    D_INFO("Initializing Event Buffer..");
 
-    if (!NT_SUCCESS(status))
+    Status = InitializeEventBuffer(UserBaseAddressPtr);
+
+    if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS("Could not allocate event buffer", status);
-        return status;
+        D_ERROR_STATUS("Could not initialize event buffer", Status);
+        return Status;
     }
-    else
+    
+    // Return address to user mode
+    Irp->IoStatus.Information = sizeof(ULONG_PTR);
+    
+    Status = InitializeProviders();
+
+    if (!NT_SUCCESS(Status))
     {
-        // Return address to user mode
-        Irp->IoStatus.Information = sizeof(ULONG_PTR);
+        D_ERROR_STATUS("Could not initialize providers.", Status);
     }
-
-    InitializeProviders();
-
-    return STATUS_SUCCESS;
+ 
+    return Status;
 }
 
 NTSTATUS InspectorStop()
 {
-    FreeProviders();
+    NTSTATUS Status = STATUS_SUCCESS;
 
-    return STATUS_SUCCESS;
+    FreeProviders();
+    Status = FreeEventBuffer();
+    
+    return Status;
 }

@@ -6,15 +6,12 @@ NTSTATUS ZeroEventBuffer();
 
 NTSTATUS InitializeEventBuffer(CircularBuffer** CircularBufferAddress);
 
-struct BufferEvent {
-    PVOID Memory;
-    ULONG NewTail;
-};
+NTSTATUS FreeEventBuffer();
 
-NTSTATUS AllocateBufferEvent(BufferEvent* Event, ULONG EventSize);
+NTSTATUS AllocateBufferEvent(PVOID Event, USHORT EventSize);
 
-NTSTATUS SendBufferEvent(BufferEvent* Event);
+NTSTATUS SendBufferEvent(EventHeader* Event);
 
-NTSTATUS CancelBufferEvent(BufferEvent* Event);
+NTSTATUS CancelBufferEvent(EventHeader* Event);
 
 

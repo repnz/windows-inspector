@@ -31,13 +31,13 @@ PROVIDER_DESCRIPTOR Providers[] = {
         InitializeImageLoadProvider,
         ReleaseImageLoadProvider,
         L"ImageLoadProvider",
-        ProviderStateNotRunning
+        ProviderStateDisabled
     },
     {
         InitializeThreadProvider,
         ReleaseThreadProvider,
         L"ThreadProvider",
-        ProviderStateNotRunning
+        ProviderStateDisabled
     },
     {
         InitializeRegistryProvider,
@@ -58,11 +58,11 @@ InitializeProviders()
     {
         if (Providers[i].State == ProviderStateDisabled)
         {
-            D_INFO_ARGS("Provider %ws is disabled.", Providers[i].ProviderName);
+            D_INFO_ARGS("Provider \"%ws\" is disabled.", Providers[i].ProviderName);
             continue;
         }
         
-        D_INFO_ARGS("Initializing Provider %ws", Providers[i].ProviderName);
+        D_INFO_ARGS("Initializing Provider \"%ws\"", Providers[i].ProviderName);
 
         Status = Providers[i].Start();
 

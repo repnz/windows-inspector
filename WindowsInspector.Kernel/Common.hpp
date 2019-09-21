@@ -206,13 +206,17 @@ struct RegistryEvent : EventHeader
 struct CircularBuffer 
 {
     PVOID BaseAddress;
+    ULONG BufferSize;
 
     // This member might not be synchronized with TailOffset / HeadOffset
     // Use it with caution
     LONG Count;
-    ULONG HeadOffset;
-    ULONG TailOffset;
-    ULONG ResetOffset;
+
+    // These members are synchronized carefully between user and kernel mode
+    ULONG WriteOffset;
+    ULONG ReadOffset;
+    LONG MemoryLeft;
+
     HANDLE Event;
 };
 
