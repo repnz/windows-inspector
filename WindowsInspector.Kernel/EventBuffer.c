@@ -1,25 +1,29 @@
-#include "EventBuffer.hpp"
-#include "Common.hpp"
-#include "Debug.hpp"
-#include <WindowsInspector.Kernel/KernelApi.hpp>
+#include "EventBuffer.h"
+#include "Common.h"
+#include "Debug.h"
+#include "KernelApi.h"
 
 // 20 mb
-const SIZE_T BUFFER_SIZE = 20 * 1024 * 1024;
+#define BUFFER_SIZE (20 * 1024 * 1024)
 
 // 78 kb
-const SIZE_T POINTER_BUFFER_SIZE = 10 * 1000 * sizeof(ULONG_PTR);
+#define POINTER_BUFFER_SIZE (10 * 1000 * sizeof(PVOID))
 
 // 20891520 bytes 
-const SIZE_T HEAP_SIZE = BUFFER_SIZE - sizeof(CircularBuffer) - POINTER_BUFFER_SIZE;
+#define HEAP_SIZE (BUFFER_SIZE - sizeof(CIRCULAR_BUFFER) - POINTER_BUFFER_SIZE)
 
-static struct _KernelMappedBuffer {
+// Offsets into the buffer
+#define POINTER_BUFFER_OFFSET sizeof(CIRCULAR_BUFFER)
+#define HEAP_OFFSET (POINTER_BUFFER_OFFSET + POINTER_BUFFER_SIZE)
+
+static struct {
     PMDL Mdl;
     
-    union {
+    union _KernelModeCircularBuffer {
         // Kernel addresses base pointers
         PVOID KernelModeBase;
-        CircularBuffer* CircularBuffer;  
-    };
+        PCIRCULAR_BUFFER CircularBuffer;  
+    } KernelModeCircularBuffer;
 
     ULONG ClientProcessId;
     PVOID UserModeBase;
@@ -34,18 +38,20 @@ static struct _KernelMappedBuffer {
 } g_Sync;
 
 
-
-const SIZE_T POINTER_BUFFER_OFFSET = sizeof(CircularBuffer);
-const SIZE_T HEAP_OFFSET = POINTER_BUFFER_OFFSET + POINTER_BUFFER_SIZE;
-
-NTSTATUS ZeroEventBuffer()
+NTSTATUS 
+ZeroEventBuffer(
+    VOID
+    )
 {
     g_Sync = { 0 };
-
+    
     return STATUS_SUCCESS;
 }
 
-NTSTATUS FreeEventBuffer()
+NTSTATUS 
+FreeEventBuffer(
+    VOID
+    )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     HANDLE ProcessHandle = NULL;
@@ -78,15 +84,22 @@ NTSTATUS FreeEventBuffer()
 
 }
 
-NTSTATUS MapUserModeAddressToSystemSpace(_In_ PVOID Buffer, _In_ ULONG Length, _In_ LOCK_OPERATION Operation,
-    _Out_ PMDL* OutputMdl, _Out_ PVOID* MappedBuffer) {
+NTSTATUS 
+MapUserModeAddressToSystemSpace(
+    __in PVOID Buffer, 
+    __in ULONG Length, 
+    __in LOCK_OPERATION Operation,
+    __out PMDL* OutputMdl, 
+    __out PVOID* MappedBuffer
+    ) 
+{
 
     if (OutputMdl == NULL || MappedBuffer == NULL)
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    NTSTATUS status;
+    NTSTATUS Status;
 
     PMDL mdl = IoAllocateMdl(Buffer, Length, FALSE, FALSE, NULL);
 
@@ -104,10 +117,10 @@ NTSTATUS MapUserModeAddressToSystemSpace(_In_ PVOID Buffer, _In_ ULONG Length, _
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
 
-        status = GetExceptionCode();
-        D_ERROR_STATUS_ARGS("Exception while locking buffer 0x%p", status, Buffer);
+        Status = GetExceptionCode();
+        D_ERROR_STATUS_ARGS("Exception while locking buffer 0x%p", Status, Buffer);
         IoFreeMdl(mdl);
-        return status;
+        return Status;
     }
 
     PVOID buffer = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute);
@@ -127,7 +140,10 @@ NTSTATUS MapUserModeAddressToSystemSpace(_In_ PVOID Buffer, _In_ ULONG Length, _
 }
 
 
-NTSTATUS InitializeEventBuffer(CircularBuffer ** CircularBufferAddress)
+NTSTATUS 
+InitializeEventBuffer(
+    __out PCIRCULAR_BUFFER* CircularBufferAddress
+    )
 {
     NTSTATUS Status = STATUS_SUCCESS;
     BOOLEAN AllocatedUserModeMemory = FALSE;
@@ -212,6 +228,7 @@ NTSTATUS InitializeEventBuffer(CircularBuffer ** CircularBufferAddress)
     ExInitializeFastMutex(&g_Sync.HeapWriterMutex);
     ExInitializeFastMutex(&g_Sync.PointerWriterMutex);
 
+    g_Sync.IsMapped = TRUE;
 
 cleanup:
     if (!NT_SUCCESS(Status))
@@ -235,13 +252,17 @@ cleanup:
         //
         // Return the base address to the caller
         //
-        *CircularBufferAddress = (CircularBuffer*)g_Sync.UserModeBase;
+        *CircularBufferAddress = (PCIRCULAR_BUFFER)g_Sync.UserModeBase;
     }
 
     return Status;
 }
 
-NTSTATUS AllocateBufferEvent(PVOID Event, USHORT EventSize)
+NTSTATUS 
+AllocateBufferEvent(
+    __out PVOID Event, 
+    __in USHORT EventSize
+    )
 {
     
     NTSTATUS Status = STATUS_SUCCESS;
@@ -259,7 +280,7 @@ NTSTATUS AllocateBufferEvent(PVOID Event, USHORT EventSize)
         goto cleanup;
     }
 
-    EventHeader** EventPtr = (EventHeader * *)Event;
+    PEVENT_HEADER* EventPtr = (PEVENT_HEADER*)Event;
 
     ExAcquireFastMutex(&g_Sync.HeapWriterMutex);
     MutexAcquired = TRUE;
@@ -279,7 +300,7 @@ NTSTATUS AllocateBufferEvent(PVOID Event, USHORT EventSize)
         g_Sync.HeapOffset = 0;
     }
     
-    *EventPtr = (EventHeader*)((PUCHAR)g_Sync.KernelModeBase + g_Sync.HeapOffset);
+    *EventPtr = (PEVENT_HEADER)((PUCHAR)g_Sync.KernelModeBase + g_Sync.HeapOffset);
     (*EventPtr)->Size = EventSize;
     
     g_Sync.HeapOffset += EventSize;
@@ -294,7 +315,10 @@ cleanup:
     return Status;
 }
 
-NTSTATUS SendBufferEvent(EventHeader* Event)
+NTSTATUS 
+SendBufferEvent(
+    __in PEVENT_HEADER Event
+    )
 {
     if (!g_Sync.IsMapped)
     {
@@ -356,7 +380,10 @@ cleanup:
     return Status;
 }
 
-NTSTATUS CancelBufferEvent(EventHeader* Event)
+NTSTATUS 
+CancelBufferEvent(
+    __in PEVENT_HEADER Event
+    )
 {
     if (!g_Sync.IsMapped)
     {

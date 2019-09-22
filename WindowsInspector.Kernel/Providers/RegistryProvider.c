@@ -1,19 +1,27 @@
-#include "RegistryProvider.hpp"
-#include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/DriverObject.hpp>
-#include <WindowsInspector.Kernel/Debug.hpp>
-#include <WindowsInspector.Kernel/EventBuffer.hpp>
+#include "RegistryProvider.h"
+#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Kernel/DriverObject.h>
+#include <WindowsInspector.Kernel/Debug.h>
+#include <WindowsInspector.Kernel/EventBuffer.h>
 
-NTSTATUS RegistryCallback(PVOID CallbackContext, PVOID Argument1, PVOID Argument2);
+NTSTATUS 
+RegistryCallback(
+    __in PVOID CallbackContext, 
+    __in PVOID Argument1, 
+    __in PVOID Argument2
+    );
 
 static LARGE_INTEGER g_RegistryCookie;
 
 NTSTATUS 
-InitializeRegistryProvider()
+InitializeRegistryProvider(
+    VOID
+)
 {
+    NTSTATUS Status;
+
     UNICODE_STRING Altitude = RTL_CONSTANT_STRING(L"7657.124");
-    
-    NTSTATUS Status = CmRegisterCallbackEx(RegistryCallback, &Altitude, g_DriverObject, NULL, &g_RegistryCookie, NULL);
+    Status = CmRegisterCallbackEx(RegistryCallback, &Altitude, g_DriverObject, NULL, &g_RegistryCookie, NULL);
     
     if (!NT_SUCCESS(Status))
     {
@@ -24,22 +32,24 @@ InitializeRegistryProvider()
     return Status;
 }
 
-VOID 
-ReleaseRegistryProvider()
+NTSTATUS 
+ReleaseRegistryProvider(
+    VOID
+)
 {
-    CmUnRegisterCallback(g_RegistryCookie);
+    return CmUnRegisterCallback(g_RegistryCookie);
 }
 
 static
 NTSTATUS
 SendRegistryEvent(
-    _In_ PVOID KeyObject,
-    _In_ RegistryEventType EventSubType,
-    _In_opt_ PCUNICODE_STRING ValueName,
-    _In_opt_ PVOID Data,
-    _In_ ULONG DataSize,
-    _In_opt_ PCUNICODE_STRING NewName,
-    _In_opt_ ULONG ValueType
+    __in PVOID KeyObject,
+    __in REGISTRY_EVENT_TYPE EventSubType,
+    __in_opt PCUNICODE_STRING ValueName,
+    __in_opt PVOID Data,
+    __in ULONG DataSize,
+    __in_opt PCUNICODE_STRING NewName,
+    __in_opt ULONG ValueType
 )
 {
     
@@ -49,8 +59,8 @@ SendRegistryEvent(
     NTSTATUS Status;
     HANDLE KeyHandle = NULL;
     ULONG KeyLength = 0;
-    USHORT RegistryEventLength = sizeof(RegistryEvent);
-    RegistryEvent* Event;
+    USHORT RegistryEventLength = sizeof(REGISTRY_EVENT);
+    PREGISTRY_EVENT Event;
 
     if (KeyObject == NULL)
     {
@@ -61,15 +71,19 @@ SendRegistryEvent(
     //
     // Calculate the length of the registry event
     //
-    Status = ObOpenObjectByPointer(KeyObject, OBJ_KERNEL_HANDLE, 0, KEY_QUERY_VALUE,
+    Status = ObOpenObjectByPointer(
+        KeyObject, 
+        OBJ_KERNEL_HANDLE, 
+        0, 
+        KEY_QUERY_VALUE,
         *CmKeyObjectType,
         KernelMode,
         &KeyHandle
     );
 
-
     if (!NT_SUCCESS(Status))
     {
+        D_ERROR("Cannot open handle to KeyObject");
         goto cleanup;
     }
 
@@ -78,6 +92,7 @@ SendRegistryEvent(
 
     if (!NT_SUCCESS(Status))
     {
+        D_ERROR("ZwQueryKey: Cannot Query The Length Of The Key Name");
         goto cleanup;
     }
 
@@ -106,18 +121,21 @@ SendRegistryEvent(
 
     if (!NT_SUCCESS(Status))
     {
+        D_ERROR_ARGS("AllocateBufferEvent Failed: Cannot allocate %d bytes for RegistryEvent", 
+            RegistryEventLength);
         goto cleanup;
     }
 
     // Initialize Key Name
 
     Event->KeyName.Offset = KeyLength;
-    Event->KeyName.Size = sizeof(RegistryEvent);
+    Event->KeyName.Size = sizeof(REGISTRY_EVENT);
 
-    Status = ZwQueryKey(KeyHandle, KeyNameInformation, Event->GetKeyName(), KeyLength, NULL);
+    Status = ZwQueryKey(KeyHandle, KeyNameInformation, RegistryEvent_GetKeyName(Event), KeyLength, NULL);
 
     if (!NT_SUCCESS(Status))
     {
+        D_ERROR("ZwQueryKey failed: Cannot query key name");
         goto cleanup;
     }
     
@@ -127,7 +145,7 @@ SendRegistryEvent(
     {
         Event->ValueName.Offset = Event->KeyName.Offset + Event->KeyName.Size;
         Event->ValueName.Size = ValueName->Length;
-        RtlCopyMemory(Event->GetValueName(), ValueName->Buffer, ValueName->Length);
+        RtlCopyMemory(RegistryEvent_GetValueName(Event), ValueName->Buffer, ValueName->Length);
     }
     else
     {
@@ -141,7 +159,7 @@ SendRegistryEvent(
     {
         Event->ValueData.Offset = Event->ValueName.Offset + Event->ValueName.Size;
         Event->ValueData.Size = DataSize;
-        RtlCopyMemory(Event->GetValueData(), Data, DataSize);
+        RtlCopyMemory(RegistryEvent_GetValueData(Event), Data, DataSize);
     }
     else
     {
@@ -154,7 +172,7 @@ SendRegistryEvent(
     {
         Event->NewName.Offset = Event->ValueData.Offset + Event->ValueData.Size;
         Event->NewName.Size = NewName->Length;
-        RtlCopyMemory(Event->GetNewName(), NewName->Buffer, NewName->Length);
+        RtlCopyMemory(RegistryEvent_GetNewName(Event), NewName->Buffer, NewName->Length);
     }
     else 
     {
@@ -162,19 +180,20 @@ SendRegistryEvent(
         Event->NewName.Size = 0;
     }
 
+    Event->Header.Type = EvtRegistryEvent;
+    Event->Header.ProcessId = HandleToUlong(PsGetCurrentProcessId());
+    Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
+    Event->Header.Time = Time;
+
     Event->ValueType = ValueType;
-    Event->ProcessId = HandleToUlong(PsGetCurrentProcessId());
-    Event->ThreadId = HandleToUlong(PsGetCurrentThreadId());
-    Event->Time = Time;
     Event->SubType = EventSubType;
-    Event->Type = EventType::RegistryEvent;
 
     SendBufferEvent(Event);
 
 cleanup:
     if (!NT_SUCCESS(Status))
     {
-        D_ERROR_STATUS_ARGS("Could not send RegistryEvent of type %s", Status, REG_EVENT_SUB_TYPE_STR(EventSubType));
+        D_ERROR_STATUS_ARGS("Could not send RegistryEvent of type '%s'", Status, REG_EVENT_SUB_TYPE_STR(EventSubType));
     }
 
     if (KeyHandle != NULL)
@@ -185,10 +204,11 @@ cleanup:
     return Status;
 }
 
-FORCEINLINE NTSTATUS
+FORCEINLINE 
+NTSTATUS
 DeleteKeyCallback(
-    _In_ PREG_DELETE_KEY_INFORMATION Information
-)
+    __in PREG_DELETE_KEY_INFORMATION Information
+    )
 {
     if (
         Information == NULL ||
@@ -200,7 +220,7 @@ DeleteKeyCallback(
 
     return SendRegistryEvent(
         Information->Object,
-        RegistryEventType::DeleteKey,
+        RegEvtDeleteKey,
         NULL,
         NULL,
         0,
@@ -212,8 +232,8 @@ DeleteKeyCallback(
 FORCEINLINE
 NTSTATUS
 SetValueKeyCallback(
-    _In_ PREG_SET_VALUE_KEY_INFORMATION Information
-)
+    __in PREG_SET_VALUE_KEY_INFORMATION Information
+    )
 {
     if (
         Information == NULL ||
@@ -227,7 +247,7 @@ SetValueKeyCallback(
 
     return SendRegistryEvent(
         Information->Object,
-        RegistryEventType::SetValue,
+        RegEvtSetValue,
         Information->ValueName,
         Information->Data,
         Information->DataSize,
@@ -239,8 +259,8 @@ SetValueKeyCallback(
 FORCEINLINE
 NTSTATUS
 RenameKeyCallback(
-    _In_ PREG_RENAME_KEY_INFORMATION Information
-)
+    __in PREG_RENAME_KEY_INFORMATION Information
+    )
 {
     if (
         Information == NULL ||
@@ -254,7 +274,7 @@ RenameKeyCallback(
 
     return SendRegistryEvent(
         Information->Object,
-        RegistryEventType::RenameKey,
+        RegEvtRenameKey,
         NULL,
         NULL,
         0,
@@ -281,7 +301,7 @@ QueryValueKeyCallback(
 
     return SendRegistryEvent(
         Information->Object,
-        RegistryEventType::QueryValue,
+        RegEvtQueryValue,
         Information->ValueName,
         NULL,
         0,
@@ -294,8 +314,8 @@ QueryValueKeyCallback(
 FORCEINLINE
 NTSTATUS
 DeleteValueKeyCallback(
-    _In_ PREG_DELETE_VALUE_KEY_INFORMATION Information
-)
+    __in PREG_DELETE_VALUE_KEY_INFORMATION Information
+    )
 {
     if (
         Information == NULL ||
@@ -309,7 +329,7 @@ DeleteValueKeyCallback(
 
     return SendRegistryEvent(
         Information->Object,
-        RegistryEventType::DeleteValue,
+        RegEvtDeleteValue,
         Information->ValueName,
         NULL,
         0,
@@ -320,10 +340,10 @@ DeleteValueKeyCallback(
 
 NTSTATUS 
 RegistryCallback(
-    _In_ PVOID CallbackContext, 
-    _In_ PVOID Argument1, 
-    _In_ PVOID Argument2
-)
+    __in PVOID CallbackContext, 
+    __in PVOID Argument1,
+    __in PVOID Argument2
+    )
 {
     UNREFERENCED_PARAMETER(CallbackContext);
 

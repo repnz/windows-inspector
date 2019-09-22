@@ -1,17 +1,33 @@
 #include <ntifs.h>
-#include <WindowsInspector.Kernel/KernelApi.hpp>
-#include <WindowsInspector.Kernel/Debug.hpp>
-#include <WindowsInspector.Kernel/Ioctl.hpp>
-#include <WindowsInspector.Kernel/Common.hpp>
-#include <WindowsInspector.Kernel/DriverObject.hpp>
+#include <WindowsInspector.Kernel/KernelApi.h>
+#include <WindowsInspector.Kernel/Debug.h>
+#include <WindowsInspector.Kernel/Ioctl.h>
+#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Kernel/DriverObject.h>
 
-NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
+NTSTATUS 
+DefaultDispatch(
+    __in PDEVICE_OBJECT DeviceObject, 
+    __inout PIRP Irp
+    );
 
-NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp);
+NTSTATUS 
+DeviceIoControlDispatch(
+    __in PDEVICE_OBJECT DeviceObject, 
+    __inout PIRP Irp
+    );
 
-void DriverUnload(_In_ PDRIVER_OBJECT DriverObject);
+VOID 
+DriverUnload(
+    __in PDRIVER_OBJECT DriverObject
+    );
 
-extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath) {
+NTSTATUS 
+DriverEntry(
+    __in PDRIVER_OBJECT DriverObject,
+    __in PUNICODE_STRING RegistryPath
+    ) 
+{
 
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
@@ -25,7 +41,7 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_S
 		return STATUS_NOT_SUPPORTED;
 	}
     
-	NTSTATUS status = STATUS_SUCCESS;
+	NTSTATUS Status = STATUS_SUCCESS;
 
 	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
 	UNICODE_STRING devName = RTL_CONSTANT_STRING(L"\\Device\\WindowsInspector");
@@ -35,23 +51,23 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_S
     InitializeIoctlHandlers();
     
     // ExclusiveAccess: TRUE
-	status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &g_DeviceObject);
+	Status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &g_DeviceObject);
 
-	if (!NT_SUCCESS(status))
+	if (!NT_SUCCESS(Status))
 	{
-		D_ERROR_STATUS("Failed to create device", status);
-        return status;
+		D_ERROR_STATUS("Failed to create device", Status);
+        return Status;
 	}
      
 	D_INFO("Creating Symbolic Link..");
 
-	status = IoCreateSymbolicLink(&symLink, &devName);
+	Status = IoCreateSymbolicLink(&symLink, &devName);
 
-	if (!NT_SUCCESS(status))
+	if (!NT_SUCCESS(Status))
 	{
-		D_ERROR_STATUS("Failed to create symbolic link", status);
+		D_ERROR_STATUS("Failed to create symbolic link", Status);
         IoDeleteDevice(g_DeviceObject);
-        return status;
+        return Status;
 	}
 
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatch;
@@ -61,10 +77,13 @@ extern "C" NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_S
 
     D_INFO("Completed DriverEntry Successfully");
 
-	return status;
+	return Status;
 }
 
-void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
+VOID 
+DriverUnload(
+    __in PDRIVER_OBJECT DriverObject
+    )
 {
 	// Remove callbacks
 	D_INFO("DriverUnload");
@@ -75,22 +94,26 @@ void DriverUnload(_In_ PDRIVER_OBJECT DriverObject)
 	IoDeleteDevice(DriverObject->DeviceObject);
 }
 
-NTSTATUS CompleteIrp(PIRP Irp, NTSTATUS status = STATUS_SUCCESS, ULONG_PTR info = 0) 
-{
-	Irp->IoStatus.Status = status;
-	Irp->IoStatus.Information = info;
-	IoCompleteRequest(Irp, 0);
-	return status;
-}
 
-NTSTATUS DefaultDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
+NTSTATUS 
+DefaultDispatch(
+    __in PDEVICE_OBJECT DeviceObject, 
+    __inout PIRP Irp
+    )
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
 
-	return CompleteIrp(Irp, STATUS_SUCCESS);
+    Irp->IoStatus.Information = 0;
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    IoCompleteRequest(Irp, 0);
+    return STATUS_SUCCESS;
 }
 
-NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP Irp)
+NTSTATUS 
+DeviceIoControlDispatch(
+    __in PDEVICE_OBJECT DeviceObject, 
+    __inout PIRP Irp
+    )
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
 	NTSTATUS Status;
@@ -113,7 +136,7 @@ NTSTATUS DeviceIoControlDispatch(_In_ PDEVICE_OBJECT DeviceObject, _Inout_ PIRP 
     {
         Status = STATUS_NOT_SUPPORTED;
     }
-
+   
 	Irp->IoStatus.Status = Status;
 	IoCompleteRequest(Irp, 0);
 	return Status;

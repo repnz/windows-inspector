@@ -24,44 +24,38 @@
     </Inf>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="Main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="KernelApi.cpp">
+    <ClCompile Include="Ioctl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Providers\ImageLoadProvider.cpp">
+    <ClCompile Include="EventBuffer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Providers\ProcessProvider.cpp">
+    <ClCompile Include="DriverObject.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Providers\Providers.cpp">
+    <ClCompile Include="Providers\ImageLoadProvider.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Providers\ThreadProvider.cpp">
+    <ClCompile Include="Providers\ProcessProvider.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EventBuffer.cpp">
+    <ClCompile Include="Providers\RegistryProvider.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Ioctl.cpp">
+    <ClCompile Include="Providers\ThreadProvider.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DriverObject.cpp">
+    <ClCompile Include="Providers\Providers.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Providers\RegistryProvider.cpp">
+    <ClCompile Include="KernelApi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="KernelApi.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Providers\ProcessCreation.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -71,31 +65,37 @@
     <ClInclude Include="Providers\ImageCallbacks.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Providers\ImageLoadProvider.hpp">
+    <ClInclude Include="KernelApi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Providers\ProcessProvider.hpp">
+    <ClInclude Include="Ioctl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Providers\Providers.hpp">
+    <ClInclude Include="EventBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Providers\ThreadProvider.hpp">
+    <ClInclude Include="Debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Debug.hpp">
+    <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EventBuffer.hpp">
+    <ClInclude Include="DriverObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Ioctl.hpp">
+    <ClInclude Include="Providers\ImageLoadProvider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DriverObject.hpp">
+    <ClInclude Include="Providers\ProcessProvider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Providers\RegistryProvider.hpp">
+    <ClInclude Include="Providers\RegistryProvider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Providers\ThreadProvider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Providers\Providers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

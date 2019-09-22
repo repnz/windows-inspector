@@ -1,9 +1,9 @@
-#include "Providers.hpp"
-#include <WindowsInspector.Kernel/Debug.hpp>
-#include <WindowsInspector.Kernel/Providers/ThreadProvider.hpp>
-#include <WindowsInspector.Kernel/Providers/ProcessProvider.hpp>
-#include <WindowsInspector.Kernel/Providers/ImageLoadProvider.hpp>
-#include "RegistryProvider.hpp"
+#include <WindowsInspector.Kernel/Debug.h>
+#include "Providers.h"
+#include "ThreadProvider.h"
+#include "ProcessProvider.h"
+#include "ImageLoadProvider.h"
+#include "RegistryProvider.h"
 
 typedef enum _PROVIDER_STATE {
     ProviderStateNotRunning,
@@ -14,7 +14,7 @@ typedef enum _PROVIDER_STATE {
 
 typedef struct _PROVIDER_DESCRIPTOR {
     NTSTATUS(*Start)();
-    VOID(*Stop)();
+    NTSTATUS(*Stop)();
     PCWSTR ProviderName;
     PROVIDER_STATE State;
 } PROVIDER_DESCRIPTOR, * PPROVIDER_DESCRIPTOR;
@@ -81,14 +81,23 @@ InitializeProviders()
     return Status;
 }
 
-VOID
+NTSTATUS
 FreeProviders()
 {
+    NTSTATUS Status;
+
     for (ULONG i = 0; i < NumberOfProviders; i++)
     {
         if (Providers[i].State == ProviderStateRunning)
         {
-            Providers[i].Stop();
+            Status = Providers[i].Stop();
+
+            if (!NT_SUCCESS(Status))
+            {
+                D_ERROR_STATUS_ARGS("Could not free provider %ws.", Status, Providers[i].ProviderName);
+                return Status;
+            }
+            
             Providers[i].State = ProviderStateNotRunning;
         }
     }

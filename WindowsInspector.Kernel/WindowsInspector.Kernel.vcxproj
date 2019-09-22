@@ -210,32 +210,32 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DriverObject.cpp" />
-    <ClCompile Include="EventBuffer.cpp" />
-    <ClCompile Include="Ioctl.cpp" />
-    <ClCompile Include="KernelApi.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Providers\ImageLoadProvider.cpp" />
-    <ClCompile Include="Providers\ProcessProvider.cpp" />
-    <ClCompile Include="Providers\Providers.cpp" />
-    <ClCompile Include="Providers\RegistryProvider.cpp" />
-    <ClCompile Include="Providers\ThreadProvider.cpp" />
+    <ClCompile Include="DriverObject.c" />
+    <ClCompile Include="EventBuffer.c" />
+    <ClCompile Include="Ioctl.c" />
+    <ClCompile Include="KernelApi.c" />
+    <ClCompile Include="Main.c" />
+    <ClCompile Include="Providers\ImageLoadProvider.c" />
+    <ClCompile Include="Providers\ProcessProvider.c" />
+    <ClCompile Include="Providers\Providers.c" />
+    <ClCompile Include="Providers\RegistryProvider.c" />
+    <ClCompile Include="Providers\ThreadProvider.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.hpp" />
-    <ClInclude Include="Debug.hpp" />
-    <ClInclude Include="DriverObject.hpp" />
-    <ClInclude Include="EventBuffer.hpp" />
-    <ClInclude Include="Ioctl.hpp" />
-    <ClInclude Include="KernelApi.hpp" />
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Debug.h" />
+    <ClInclude Include="DriverObject.h" />
+    <ClInclude Include="EventBuffer.h" />
+    <ClInclude Include="Ioctl.h" />
+    <ClInclude Include="KernelApi.h" />
     <ClInclude Include="Providers\ImageCallbacks.hpp" />
-    <ClInclude Include="Providers\ImageLoadProvider.hpp" />
+    <ClInclude Include="Providers\ImageLoadProvider.h" />
     <ClInclude Include="Providers\ProcessCreation.hpp" />
-    <ClInclude Include="Providers\ProcessProvider.hpp" />
-    <ClInclude Include="Providers\Providers.hpp" />
-    <ClInclude Include="Providers\RegistryProvider.hpp" />
+    <ClInclude Include="Providers\ProcessProvider.h" />
+    <ClInclude Include="Providers\Providers.h" />
+    <ClInclude Include="Providers\RegistryProvider.h" />
     <ClInclude Include="Providers\ThreadCallbacks.hpp" />
-    <ClInclude Include="Providers\ThreadProvider.hpp" />
+    <ClInclude Include="Providers\ThreadProvider.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

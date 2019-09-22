@@ -2,6 +2,16 @@
 #include <ntifs.h>	
 
 // Debugging Macros
+//
+// Common Format Specifiers:
+//
+// %d - ULONG
+// %p - Pointer. (Typically used with 0x%p)
+// %s - STR
+// %ws - WSTR
+// %Z - STRING object pointer
+// %wZ - UNICODE_STRING object pointer
+//
 
 #define DRIVER_PREFIX "WindowsInspector: (%s:%d):   "
 

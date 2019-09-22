@@ -1,6 +1,6 @@
 #pragma once
-#include <WindowsInspector.Kernel/KernelApi.hpp>
-#include "Debug.hpp"
+#include <WindowsInspector.Kernel/KernelApi.h>
+#include "Debug.h"
 
 ZwQueryInformationThreadFunc ZwQueryInformationThread;
 
@@ -50,7 +50,7 @@ NTSTATUS
 GetProcessHandleById(
     __in ULONG ProcessId,
     __out PHANDLE ProcessHandle
-)
+    )
 {
     OBJECT_ATTRIBUTES attr;
     InitializeObjectAttributes(&attr, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);

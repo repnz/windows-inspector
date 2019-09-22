@@ -1,7 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <memory>
-#include <WindowsInspector.Kernel/Common.hpp>
+#include <WindowsInspector.Kernel/Common.h>
 
 struct HandleDeleter 
 {

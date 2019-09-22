@@ -16,15 +16,15 @@ extern ZwQueryInformationThreadFunc ZwQueryInformationThread;
 NTSTATUS 
 KernelApiInitialize(
     VOID
-);
+    );
 
 NTSTATUS 
 GetCurrentProcessHandle(
     __out PHANDLE ProcessHandle
-);
+    );
 
 NTSTATUS
 GetProcessHandleById(
     __in ULONG ProcessId,
     __out PHANDLE ProcessHandle
-);
+    );

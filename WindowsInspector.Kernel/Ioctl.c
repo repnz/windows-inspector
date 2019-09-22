@@ -1,20 +1,26 @@
-#include "Ioctl.hpp"
-#include <WindowsInspector.Kernel/Providers/Providers.hpp>
-#include <WindowsInspector.Kernel/Debug.hpp>
-#include "EventBuffer.hpp"
-#include "Common.hpp"
+#include "Ioctl.h"
+#include <WindowsInspector.Kernel/Providers/Providers.h>
+#include <WindowsInspector.Kernel/Debug.h>
+#include "EventBuffer.h"
+#include "Common.h"
 
 
-NTSTATUS InitializeIoctlHandlers()
+NTSTATUS 
+InitializeIoctlHandlers(
+    VOID
+    )
 {
     return ZeroEventBuffer();
 }
 
-NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
+NTSTATUS 
+InspectorListen(
+    __in PIRP Irp, 
+    __in PIO_STACK_LOCATION IoStackLocation)
 {
     D_INFO("Got IOCTL to listen to events.");
 
-    CircularBuffer** UserBaseAddressPtr = NULL;
+    PCIRCULAR_BUFFER* UserBaseAddressPtr = NULL;
     NTSTATUS Status = STATUS_SUCCESS;
 
     if (IoStackLocation->Parameters.DeviceIoControl.OutputBufferLength != sizeof(PVOID))
@@ -22,7 +28,7 @@ NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
         return STATUS_INVALID_BUFFER_SIZE;
     }
 
-    UserBaseAddressPtr = (CircularBuffer**)Irp->AssociatedIrp.SystemBuffer;
+    UserBaseAddressPtr = (PCIRCULAR_BUFFER*)Irp->AssociatedIrp.SystemBuffer;
     
     D_INFO("Initializing Event Buffer..");
 
@@ -47,7 +53,10 @@ NTSTATUS InspectorListen(PIRP Irp, PIO_STACK_LOCATION IoStackLocation)
     return Status;
 }
 
-NTSTATUS InspectorStop()
+NTSTATUS 
+InspectorStop(
+    VOID
+    )
 {
     NTSTATUS Status = STATUS_SUCCESS;
 
