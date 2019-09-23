@@ -1,8 +1,8 @@
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/KernelApi.h>
-#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
-#include "ThreadProvider.hpp"
+#include "ThreadProvider.h"
 
 VOID
 OnThreadNotify(

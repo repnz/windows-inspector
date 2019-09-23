@@ -1,5 +1,5 @@
 #include "RegistryProvider.h"
-#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/DriverObject.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>

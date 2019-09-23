@@ -1,6 +1,6 @@
 #pragma once
 #include <ntifs.h>
-#include "Common.h"
+#include <WindowsInspector.Shared/Common.h>
 
 NTSTATUS 
 ZeroEventBuffer(
@@ -25,12 +25,12 @@ AllocateBufferEvent(
 
 NTSTATUS 
 SendBufferEvent(
-    __in PEVENT_HEADER Event
+    __in PVOID Event
     );
 
 NTSTATUS 
 CancelBufferEvent(
-    __in PEVENT_HEADER Event
+    __in PVOID Event
     );
 
 

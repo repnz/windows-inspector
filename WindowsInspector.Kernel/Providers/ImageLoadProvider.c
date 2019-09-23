@@ -1,5 +1,5 @@
 #include <WindowsInspector.Kernel/Debug.h>
-#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
 #include "ImageLoadProvider.h"
 
@@ -18,7 +18,7 @@ InitializeImageLoadProvider(
     return PsSetLoadImageNotifyRoutine(OnImageLoadNotify);
 }
 
-NTSTAUS 
+NTSTATUS 
 ReleaseImageLoadProvider(
     VOID
     )

@@ -2,7 +2,7 @@
 #include <WindowsInspector.Kernel/KernelApi.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/Ioctl.h>
-#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/DriverObject.h>
 
 NTSTATUS 

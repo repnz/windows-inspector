@@ -1,5 +1,5 @@
 #include "EventBuffer.h"
-#include "Common.h"
+#include <WindowsInspector.Shared/Common.h>
 #include "Debug.h"
 #include "KernelApi.h"
 
@@ -18,13 +18,10 @@
 
 static struct {
     PMDL Mdl;
-    
-    union _KernelModeCircularBuffer {
-        // Kernel addresses base pointers
+    union {
         PVOID KernelModeBase;
-        PCIRCULAR_BUFFER CircularBuffer;  
-    } KernelModeCircularBuffer;
-
+        PCIRCULAR_BUFFER CircularBuffer;
+    } DUMMYUNIONNAME;
     ULONG ClientProcessId;
     PVOID UserModeBase;
     LONG IsMapped;
@@ -43,8 +40,8 @@ ZeroEventBuffer(
     VOID
     )
 {
-    g_Sync = { 0 };
-    
+    RtlZeroMemory(&g_Sync, sizeof(g_Sync));
+
     return STATUS_SUCCESS;
 }
 
@@ -244,8 +241,7 @@ cleanup:
             ZwFreeVirtualMemory(NtCurrentProcess(), &g_Sync.UserModeBase, NULL, MEM_RELEASE);
         }
 
-        g_Sync = { 0 };
-        
+        RtlZeroMemory(&g_Sync, sizeof(g_Sync));
     }
     else
     {
@@ -284,7 +280,7 @@ AllocateBufferEvent(
 
     ExAcquireFastMutex(&g_Sync.HeapWriterMutex);
     MutexAcquired = TRUE;
-
+    
     if (g_Sync.CircularBuffer->MemoryLeft < EventSize)
     {
         Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -317,7 +313,7 @@ cleanup:
 
 NTSTATUS 
 SendBufferEvent(
-    __in PEVENT_HEADER Event
+    __in PVOID Event
     )
 {
     if (!g_Sync.IsMapped)
@@ -382,9 +378,11 @@ cleanup:
 
 NTSTATUS 
 CancelBufferEvent(
-    __in PEVENT_HEADER Event
+    __in PVOID Event
     )
 {
+    PEVENT_HEADER EventObj = (PEVENT_HEADER)Event;
+
     if (!g_Sync.IsMapped)
     {
         return STATUS_UNSUCCESSFUL;
@@ -394,6 +392,6 @@ CancelBufferEvent(
         return STATUS_INVALID_PARAMETER;
     }
 
-    InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, Event->Size);
+    InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, EventObj->Size);
     return STATUS_SUCCESS;
 }

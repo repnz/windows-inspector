@@ -6,7 +6,7 @@ InitializeProviders(
     VOID
     );
 
-VOID 
+NTSTATUS
 FreeProviders(
     VOID
     );

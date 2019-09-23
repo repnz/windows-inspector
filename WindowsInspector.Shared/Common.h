@@ -21,20 +21,10 @@ typedef enum _EVT_TYPE {
     EvtRegistryEvent
 } EVT_TYPE, *PEVT_TYPE;
 
-PCSTR CONST EventTypeStr[] = 
-{
-    "None",
-    "ProcessCreate",
-    "ProcessExit",
-    "ImageLoad",
-    "ThreadCreate",
-    "ThreadExit",
-    "RegistryEvent"
-};
-
+extern PCSTR CONST EventTypeStr[];
 
 typedef struct _EVENT_HEADER {
-    EVENT_TYPE Type;
+    EVT_TYPE Type;
     USHORT Size;
     LARGE_INTEGER Time;
     ULONG ProcessId;
@@ -115,32 +105,12 @@ typedef enum _REGISTRY_EVENT_TYPE {
     RegEvtDeleteValue
 } REGISTRY_EVENT_TYPE, *PREGISTRY_EVENT_TYPE;
 
-PCSTR CONST RegistryEventTypeStr[] =
-{
-    "DeleteKey",
-    "SetValue",
-    "RenameKey",
-    "QueryValue",
-    "DeleteValue"
-};
+extern PCSTR CONST RegistryEventTypeStr[];
+
 
 #define REG_EVENT_SUB_TYPE_STR(SubType) RegistryEventTypeStr[(int)SubType]
 
-PCSTR CONST RegistryValueDataTypeStr[] =
-{
-    "REG_NONE",
-    "REG_SZ",
-    "REG_EXPAND_SZ",
-    "REG_BINARY",
-    "REG_DWORD",
-    "REG_DWORD_BIG_ENDIAN",
-    "REG_LINK",
-    "REG_MULTI_SZ",
-    "REG_RESOURCE_LIST",
-    "REG_FULL_RESOURCE_DESCRIPTOR",
-    "REG_RESOURCE_REQUIREMENTS_LIST",
-    "REG_QWORD"
-};
+extern PCSTR CONST RegistryValueDataTypeStr[];
 
 #define REG_VALUE_TYPE_STR(ValueType) RegistryValueDataTypeStr[(int)ValueType];
 
@@ -190,6 +160,15 @@ RegistryEvent_GetValueName(
     )
 {
     return EVENT_GET_APPENDIX(Event, Event->ValueName, PWSTR);
+}
+
+FORCEINLINE
+PVOID
+RegistryEvent_GetValueData(
+    __in PREGISTRY_EVENT Event
+)
+{
+    return EVENT_GET_APPENDIX(Event, Event->ValueData, PVOID);
 }
 
 FORCEINLINE 

@@ -1,7 +1,7 @@
-#include <WindowsInspector.Kernel/Common.h>
+#include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
-#include "ProcessProvider.hpp"
+#include "ProcessProvider.h"
 
 VOID
 OnProcessNotify(

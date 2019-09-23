@@ -2,7 +2,7 @@
 #include <WindowsInspector.Kernel/Providers/Providers.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include "EventBuffer.h"
-#include "Common.h"
+#include <WindowsInspector.Shared/Common.h>
 
 
 NTSTATUS 

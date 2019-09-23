@@ -101,5 +101,7 @@ FreeProviders()
             Providers[i].State = ProviderStateNotRunning;
         }
     }
+
+    return STATUS_SUCCESS;
     
 }

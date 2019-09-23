@@ -15,33 +15,36 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="InspectorDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EventFormatter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="WindowsInspectorController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="base64.cpp">
+    <ClCompile Include="..\WindowsInspector.Shared\Common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EventFormatter.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InspectorDriver.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EventFormatter.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="InspectorDriver.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WindowsInspectorController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="base64.h">
+    <ClInclude Include="..\WindowsInspector.Shared\Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InspectorDriver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EventFormatter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ntos.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
