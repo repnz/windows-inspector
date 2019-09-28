@@ -14,7 +14,7 @@ DriverInitialize(
 NTSTATUS
 DriverListen(
     __in PINSPECTOR_DRIVER Driver,
-    __out PCIRCULAR_BUFFER Buffer
+	__out PCIRCULAR_BUFFER* Buffer
     );
 
 NTSTATUS
@@ -22,3 +22,8 @@ DriverStop(
     __in PINSPECTOR_DRIVER Driver
     );
 
+
+NTSTATUS
+DriverRelease(
+	__in PINSPECTOR_DRIVER  Driver
+	);

@@ -7,6 +7,16 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WindowsInspector.Controller
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WindowsInspector.Kernel", "WindowsInspector.Kernel\WindowsInspector.Kernel.vcxproj", "{F0D0B39C-274C-4049-9C61-51E7F3A7FF4C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WindowsInspector.Shared", "WindowsInspector.Shared", "{9A2C53EF-C381-4147-ACE4-BDF6A2795A3C}"
+	ProjectSection(SolutionItems) = preProject
+		WindowsInspector.Shared\base64.c = WindowsInspector.Shared\base64.c
+		WindowsInspector.Shared\base64.h = WindowsInspector.Shared\base64.h
+		WindowsInspector.Shared\Common.c = WindowsInspector.Shared\Common.c
+		WindowsInspector.Shared\Common.h = WindowsInspector.Shared\Common.h
+		WindowsInspector.Shared\MemStream.h = WindowsInspector.Shared\MemStream.h
+		WindowsInspector.Shared\Std.h = WindowsInspector.Shared\Std.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM

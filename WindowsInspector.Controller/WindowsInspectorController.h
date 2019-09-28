@@ -1,8 +1,12 @@
 #pragma once
+#include <windows.h>
 
-class WindowsInspectorController
-{
-public:
-	static void Listen();
-    static void Stop();
-};
+NTSTATUS
+WindowsInspectorListen(
+	VOID
+	);
+
+VOID
+WindowsInspectorStop(
+	VOID
+	);

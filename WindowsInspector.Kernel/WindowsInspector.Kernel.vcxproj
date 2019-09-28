@@ -161,6 +161,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4748;%(DisableSpecificWarnings);4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>
@@ -170,6 +171,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4603;4627;4986;4987;4996;%(DisableSpecificWarnings);4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>
@@ -180,7 +182,7 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
-      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings);4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>
@@ -191,7 +193,7 @@
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(SolutionDir)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions);KERNEL_DRIVER</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
-      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>26439;26455;26440;26493;26477;%(DisableSpecificWarnings);4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalOptions>/integritycheck %(AdditionalOptions)</AdditionalOptions>

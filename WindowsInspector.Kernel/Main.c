@@ -31,7 +31,7 @@ DriverEntry(
 
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
-    
+
     D_INFO("Driver Is Starting!");
     D_INFO("Initializing Kernel API...");
 

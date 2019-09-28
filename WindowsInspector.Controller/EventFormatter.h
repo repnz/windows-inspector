@@ -1,7 +1,8 @@
 #pragma once
 #include <WindowsInspector.Shared/Common.h>
 
-VOID
+
+NTSTATUS
 FmtDumpEvent(
     __inout PCHAR Buffer, 
     __in ULONG BufferLength,

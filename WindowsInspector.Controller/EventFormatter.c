@@ -1,204 +1,343 @@
-#include "EventFormatter.hpp"
-#include <iomanip>
-#include <sstream>
-#include "base64.h"
+#include "EventFormatter.h"
+#include <ntstatus.h>
+#include "ntos.h"
+#include <stdio.h>
+#include <WindowsInspector.Shared/MemStream.h>
+#include <WindowsInspector.Shared/base64.h>
 
-void DumpCommonInformation(std::ostream& outputStream, const EventHeader& e);
-void DumpProcessExitEvent(std::ostream& outputStream, const ProcessExitEvent& e);
-void DumpProcessCreateEvent(std::ostream& outputStream, const ProcessCreateEvent& e);
-void DumpThreadCreateEvent(std::ostream& outputStream, const ThreadCreateEvent& e);
-void DumpThreadExitEvent(std::ostream& outputStream, const ThreadExitEvent& e);
-void DumpImageLoadEvent(std::ostream& outputStream, const ImageLoadEvent& e);
-void DumpRegistryEvent(std::ostream& outputStream, const RegistryEvent& e);
-
-const int EVENT_NAME_WIDTH = 10;
-const int EVENT_TIMESTAMP_WIDTH = 10;
-
-using std::setw; // only for 1
-using std::setfill;
-using std::hex;
-using std::dec;
-using std::left;
-using std::right;
-
-const std::string columnSeperator = "  ||  ";
-
-
-void EventFormatter::DumpEvent(std::ostream& outputStream, const EventHeader* event)
-{
-	switch (event->Type) 
-	{
-	case EventType::ProcessExit:
-		DumpProcessExitEvent(outputStream, *(ProcessExitEvent*)event);
-		break;
-	case EventType::ProcessCreate:
-		DumpProcessCreateEvent(outputStream, *(ProcessCreateEvent*)event);
-		break;
-	case EventType::ThreadCreate:
-		DumpThreadCreateEvent(outputStream, *(ThreadCreateEvent*)event);
-		break;
-	case EventType::ThreadExit:
-		DumpThreadExitEvent(outputStream, *(ThreadExitEvent*)event);
-		break;
-	case EventType::ImageLoad:
-		DumpImageLoadEvent(outputStream, *(ImageLoadEvent*)event);
-		break;
-    case EventType::RegistryEvent:
-        DumpRegistryEvent(outputStream, *(RegistryEvent*)event);
-        break;
-	default:
-		throw std::runtime_error("Error! Buffer Has Problems!");
-	}
-
-}
-
-std::string EventFormatter::ToString(const EventHeader* header)
-{
-	std::stringstream evt;
-	DumpEvent(evt, header);
-	return evt.str();
-}
-
-void DumpTime(std::ostream& outputStream, const LARGE_INTEGER& time)
-{
+#define EVENT_NAME_WIDTH = 10;
+#define EVENT_TIMESTAMP_WIDTH = 10;
+#define COLUMN_SEPERATOR "  ||  "
 	
 
+NTSTATUS 
+DumpTime(
+	__in const PLARGE_INTEGER Time,
+	__inout mem_stream* Stream
+	)
+{
 	SYSTEMTIME st;
-	::FileTimeToSystemTime((FILETIME*)&time, &st);
+	stream_error rc;
 
-	char fillChar = outputStream.fill();
-
-	outputStream << setfill('0') <<
-		setw(2) << st.wHour   << ":" <<
-		setw(2) << st.wMinute << ":" <<
-		setw(2) << st.wSecond << ":" <<
-		setw(3) << st.wMilliseconds;
-
-	outputStream << setfill(fillChar);
-}
-
-
-void DumpCommonInformation(std::ostream& outputStream, const EventHeader& e)
-{
-
-	DumpTime(outputStream, e.Time);
+	if (!FileTimeToSystemTime((FILETIME*)Time, &st))
+	{
+		printf("FileTimeToSystemTime failed. Error: 0x%08X\n", GetLastError());
+		return STATUS_UNSUCCESSFUL;
+	}
 	
-    outputStream << columnSeperator << setw(EVENT_NAME_WIDTH) << e.GetEventName() <<
-        "ProcessId=" << setw(5) << e.ProcessId << columnSeperator <<
-        "ThreadId=" << setw(5) << e.ThreadId << columnSeperator;
-}
-
-void DumpProcessExitEvent(std::ostream& outputStream, const ProcessExitEvent& e)
-{
-	DumpCommonInformation(outputStream, e);
-}
-
-void DumpAsAscii(PCWSTR pString, ULONG uSize, std::ostream& outputStream)
-{
-    for (ULONG i = 0; i < uSize; i++)
-    {
-        outputStream << (char)pString[i];
-    }
-}
-
-std::string WideToString(PCWSTR lpString, ULONG uSize) 
-{
+	rc = mem_stream_printf(Stream, NULL, "%02d:%02d:%02d:%03d", st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	
-	std::string s(uSize, ' ');
-
-	for (ULONG i = 0; i < uSize; i++)
-    {
-		s[i] = (char)lpString[i];
+	if (!STRM_IS_SUCCESS(rc))
+	{
+		return STATUS_UNSUCCESSFUL;
 	}
 
-	return s;
+	return STATUS_SUCCESS;
 }
 
-void DumpProcessCreateEvent(std::ostream& outputStream, const ProcessCreateEvent& e)
+
+NTSTATUS
+DumpCommonInformation(
+	__in PEVENT_HEADER Event,
+	__inout mem_stream* Stream
+	)
 {
-	DumpCommonInformation(outputStream, e);
+	NTSTATUS Status;
+
+	Status = DumpTime(&Event->Time, Stream);
+
+	if (!NT_SUCCESS(Status))
+	{
+		printf("DumpTime failed. (0x%08x)\n", Status);
+		return Status;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "%10s", Event_GetEventName(Event))))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ProcessId=%05d " COLUMN_SEPERATOR, Event->ProcessId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ThreadId=%05d" COLUMN_SEPERATOR, Event->ThreadId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS 
+DumpProcessExitEvent(
+	__in PPROCESS_EXIT_EVENT Event, 
+	__inout mem_stream* Stream
+	)
+{
+	return DumpCommonInformation(&Event->Header, Stream);
+}
+
+
+NTSTATUS 
+DumpProcessCreateEvent(
+	__in PPROCESS_CREATE_EVENT Event, 
+	__inout mem_stream* Stream
+	)
+{
+	DumpCommonInformation(&Event->Header, Stream);
 	
-	outputStream <<
-		"ParentProcessId="   << setw(5) << e.ParentProcessId << columnSeperator <<
-		"NewProcessId="      << setw(5) << e.NewProcessId << columnSeperator <<
-		"CommandLine="       << WideToString(e.GetProcessCommandLine(), e.CommandLine.Size/2) << columnSeperator <<
-		std::endl;
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ParentProcessId=%05d" COLUMN_SEPERATOR, Event->ParentProcessId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "NewProcessId=%05d" COLUMN_SEPERATOR, Event->NewProcessId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	PCWSTR CommandLine = ProcessCreate_GetCommandLine(Event);
+	
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "CommandLine=%S" COLUMN_SEPERATOR, CommandLine)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	return STATUS_SUCCESS;
 }
 
-void DumpThreadCreateEvent(std::ostream& outputStream, const ThreadCreateEvent& e)
+NTSTATUS
+DumpThreadCreateEvent(
+	__in PTHREAD_CREATE_EVENT Event, 
+	__inout mem_stream* Stream
+	)
 {
-	DumpCommonInformation(outputStream, e);
+	NTSTATUS Status = DumpCommonInformation(&Event->Header, Stream);
+
+	if (!NT_SUCCESS(Status))
+	{
+		return Status;
+	}
     
-    outputStream << "TargetProcessId=" << setw(5) << e.TargetProcessId << columnSeperator;
-    outputStream << "NewThreadId=" << setw(5) << e.NewThreadId << columnSeperator;
-    outputStream << "StartAddress=" << "0x" << setfill('0') << hex << setw(16) << e.StartAddress << dec << columnSeperator;
-    outputStream << setfill(' ') << std::endl;
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "TargetProcessId=%05d" COLUMN_SEPERATOR, Event->TargetProcessId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "NewThreadId=%05d" COLUMN_SEPERATOR, Event->NewThreadId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "StartAddress=0x%016X" COLUMN_SEPERATOR, Event->NewThreadId)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS((mem_stream_printf(Stream, NULL, "StartAddress=0x%016X" COLUMN_SEPERATOR, Event->StartAddress))))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	return STATUS_SUCCESS;
 }
 
-void DumpThreadExitEvent(std::ostream& outputStream, const ThreadExitEvent& e)
+NTSTATUS 
+DumpThreadExitEvent(
+	__in PTHREAD_EXIT_EVENT Event, 
+	__inout mem_stream* Stream
+	)
 {
-	DumpCommonInformation(outputStream, e);
+	return DumpCommonInformation(&Event->Header, Stream);
 }
 
-void DumpImageLoadEvent(std::ostream& outputStream, const ImageLoadEvent& e)
+NTSTATUS 
+DumpImageLoadEvent(
+	__in PIMAGE_LOAD_EVENT Event,
+	__inout mem_stream* Stream
+	)
 {
-	DumpCommonInformation(outputStream, e);
-    const std::streamsize w = outputStream.width();
+	NTSTATUS Status = DumpCommonInformation(&Event->Header, Stream);
 
-    outputStream << "LoadAddress=" << setfill('0') << setw(16) << hex << e.LoadAddress << columnSeperator;
-    outputStream << "ImageSize=" << e.ImageSize << columnSeperator << dec;
-    outputStream << setfill(' ') << "ImageFileName=" << WideToString(e.GetImageFileName(), e.ImageFileName.Size / 2) << columnSeperator;
-    outputStream <<  std::endl;
+	if (!NT_SUCCESS(Status))
+	{
+		return Status;
+	}
+
+	PWSTR ImageFileName = ImageLoad_GetImageName(Event);
+	
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "FileName=%S" COLUMN_SEPERATOR, ImageFileName)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "LoadAddress=0x%016X" COLUMN_SEPERATOR, Event->LoadAddress)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ImageSize=0x%016X" COLUMN_SEPERATOR, Event->ImageSize)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	return STATUS_SUCCESS;
 }
 
+#define BASE64_BUFFER_SIZE (1024*1024)
 
-void DumpRegistryEvent(std::ostream& outputStream, const RegistryEvent& e)
+
+NTSTATUS 
+DumpRegistryEvent(
+	__in PREGISTRY_EVENT Event,
+	__inout mem_stream* Stream
+	)
 {
-    DumpCommonInformation(outputStream, e);
+	static PCHAR Base64Buffer = NULL;
 
-    outputStream <<
-        "RegistryEventType=" << setw(16) << e.GetSubTypeString() << columnSeperator <<
-        "KeyName=" << e.GetKeyName() << columnSeperator;
+	if (Base64Buffer == NULL)
+	{
+		Base64Buffer = HeapAlloc(NULL, 0, BASE64_BUFFER_SIZE);
+	}
 
-    if (e.ValueName.Offset == 0)
-        return;
+	NTSTATUS Status = DumpCommonInformation(&Event->Header, Stream);
 
-    outputStream << "ValueName=" << e.GetValueName() << columnSeperator;
+	if (!NT_SUCCESS(Status))
+	{
+		return Status;
+	}
 
-    if (e.ValueData.Offset == 0)
-        return;
+	PCSTR SubType = RegistryEvent_GetSubTypeString(Event);
 
-    outputStream << "ValueType=" << e.GetValueTypeName() << columnSeperator;
-    outputStream << "ValueData=";
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "RegistryEventType=%s" COLUMN_SEPERATOR, SubType)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
 
-    switch (e.ValueType)
+	PWSTR KeyName = RegistryEvent_GetKeyName(Event);
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "RegistryEventType=%10S" COLUMN_SEPERATOR, KeyName)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+    if (Event->ValueName.Offset == 0)
+        return STATUS_SUCCESS;
+
+    PCWSTR ValueName = RegistryEvent_GetValueName(Event);
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ValueName=%S" COLUMN_SEPERATOR, ValueName)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+    if (Event->ValueData.Offset == 0)
+        return STATUS_SUCCESS;
+
+	PCSTR ValueTypeName = RegistryEvent_GetValueTypeName(Event);
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ValueType=%s" COLUMN_SEPERATOR, ValueTypeName)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "ValueData=")))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+	
+    switch (Event->ValueType)
     {
         case REG_DWORD:
         {
-            uint32_t ValueData = *(PULONG)e.GetValueData();
-            outputStream << "0x" << setfill('0') << setw(8) << hex << ValueData << setfill(' ') << dec;
+            uint32_t ValueData = *(uint32_t*)RegistryEvent_GetValueData(Event);
+			
+			if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "%u" COLUMN_SEPERATOR, ValueData)))
+			{
+				return STATUS_UNSUCCESSFUL;
+			}
+
             break;
         }
         case REG_QWORD:
         {
-            uint64_t ValueData = *(uint64_t*)e.GetValueData();
-            outputStream << "0x" << setfill('0') << setw(16) << hex << ValueData << setfill(' ') << dec;
+			uint64_t ValueData = *(uint64_t*)RegistryEvent_GetValueData(Event);
+
+			if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "%lu" COLUMN_SEPERATOR, ValueData)))
+			{
+				return STATUS_UNSUCCESSFUL;
+			}
+
             break;
         }
         case REG_SZ:
         {
-            PCWSTR ValueData = (PCWSTR)e.GetValueData();
-            DumpAsAscii(ValueData, e.ValueData.Size / 2, outputStream);
+			PCWSTR ValueData = (PCWSTR)RegistryEvent_GetValueData(Event);
+
+			if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "%S" COLUMN_SEPERATOR, ValueData)))
+			{
+				return STATUS_UNSUCCESSFUL;
+			}
+
             break;
         }
         default:
         {
-            outputStream << base64_encode((PUCHAR)e.GetValueData(), e.ValueData.Size);
+			PUCHAR ValueData = (PUCHAR)RegistryEvent_GetValueData(Event);
+			unsigned int outputLength = base64_encode(ValueData, Event->ValueData.Size, Base64Buffer, BASE64_BUFFER_SIZE);
+			
+			if (!outputLength)
+			{
+				return STATUS_UNSUCCESSFUL;
+			}
+			
+			ValueData[outputLength] = 0;
+
+			if (!STRM_IS_SUCCESS(mem_stream_printf(Stream, NULL, "%s" COLUMN_SEPERATOR, Base64Buffer)))
+			{
+				return STATUS_UNSUCCESSFUL;
+			}
+
             break;
         }
     }
 
-    outputStream << setfill(' ');
-    outputStream << columnSeperator;
-    outputStream << std::endl;
+    return STATUS_SUCCESS;
+}
+
+
+
+NTSTATUS
+FmtDumpEvent(
+	__inout PCHAR Buffer,
+	__in ULONG BufferLength,
+	__in PEVENT_HEADER Event
+	)
+{
+	mem_stream Stream;
+
+	if (STRM_IS_SUCCESS(mem_stream_init(&Stream, Buffer, BufferLength)))
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	switch (Event->Type)
+	{
+	case EvtProcessExit:
+		return DumpProcessExitEvent((PPROCESS_EXIT_EVENT)Event, &Stream);
+	case EvtProcessCreate:
+		return DumpProcessCreateEvent((PPROCESS_CREATE_EVENT)Event, &Stream);
+	case EvtThreadCreate:
+		return DumpThreadCreateEvent((PTHREAD_CREATE_EVENT)Event, &Stream);
+	case EvtThreadExit:
+		return DumpThreadExitEvent((PTHREAD_EXIT_EVENT)Event, &Stream);
+	case EvtImageLoad:
+		return DumpImageLoadEvent((PIMAGE_LOAD_EVENT)Event, &Stream);
+	case EvtRegistryEvent:
+		return DumpRegistryEvent((PREGISTRY_EVENT)Event, &Stream);
+	default:
+		printf("Error! Buffer Has Problems! Unknown Event Type: %d\n", Event->Type);
+		return STATUS_UNSUCCESSFUL;
+	}
 }

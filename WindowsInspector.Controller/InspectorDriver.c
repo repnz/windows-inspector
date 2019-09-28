@@ -1,8 +1,9 @@
 #include "InspectorDriver.h"
 #include "ntos.h"
 #include <stdio.h>
+#include <assert.h>
 
-#define DEVICE_NAME "\\\\.\\WindowsInspector"
+#define DEVICE_NAME L"\\\\.\\WindowsInspector"
 
 NTSTATUS
 DriverInitialize(
@@ -11,13 +12,14 @@ DriverInitialize(
 {
     NTSTATUS Status;
     OBJECT_ATTRIBUTES DeviceObjectAttributes;
-    PIO_STATUS_BLOCK IoStatus;
+    IO_STATUS_BLOCK IoStatus;
+	UNICODE_STRING DeviceName = RTL_CONSTANT_STRING(DEVICE_NAME);
 
-	InitializeObjectAttributes(&DeviceObjectAttributes, DEVICE_NAME, NULL, NULL, NULL);
+	InitializeObjectAttributes(&DeviceObjectAttributes, &DeviceName, 0, NULL, NULL);
 	
 
 	Status = NtCreateFile(
-        Driver,
+        &Driver->DeviceHandle,
         GENERIC_ALL,
         &DeviceObjectAttributes,
         &IoStatus,
@@ -41,12 +43,12 @@ DriverInitialize(
 
 NTSTATUS
 DriverListen(
-	__in PINSPECTOR_DRIVER Driver
+	__in PINSPECTOR_DRIVER Driver,
+	__out PCIRCULAR_BUFFER* Buffer
 	)
 {
 	NTSTATUS Status;
-    PCIRCULAR_BUFFER Buffer;
-	PIO_STATUS_BLOCK IoStatus;
+	IO_STATUS_BLOCK IoStatus;
 
 	Status = NtDeviceIoControlFile(
 		Driver->DeviceHandle,
@@ -57,8 +59,8 @@ DriverListen(
 		INSPECTOR_LISTEN_CTL_CODE,
 		NULL,
 		0,
-		&Buffer,
-		sizeof(Buffer)
+		Buffer,
+		sizeof(PVOID)
 	);
 
 	if (!NT_SUCCESS(Status))
@@ -67,9 +69,9 @@ DriverListen(
 		return Status;
 	}
 
-	if (IoStatus->Information != sizeof(Buffer))
+	if (IoStatus.Information != sizeof(PVOID))
 	{
-		printf("Return length is not valid. Length: %d", IoStatus->Information);
+		printf("Return length is not valid. Length: %lld", IoStatus.Information);
 		return Status;
 	}
 
@@ -78,35 +80,39 @@ DriverListen(
 
 NTSTATUS
 DriverStop(
-	__in PINSPECTOR_DRIVER Driver,
+	__in PINSPECTOR_DRIVER Driver
 	)
 {
-    if (!DeviceIoControl(
-        hDriver.get(),
-        INSPECTOR_STOP_CTL_CODE,
-        NULL,
-        0,
-        NULL,
-        0,
-        &bytesReturned,
-        NULL
-    ))
-    {
-        throw std::runtime_error("Could not call INSPECTOR_STOP iocl");
-    }
+	NTSTATUS Status;
+	IO_STATUS_BLOCK IoStatus;
+
+	Status = NtDeviceIoControlFile(
+		Driver->DeviceHandle,
+		NULL,
+		NULL,
+		NULL,
+		&IoStatus,
+		INSPECTOR_STOP_CTL_CODE,
+		NULL,
+		0,
+		NULL,
+		0
+	);
+
+	if (!NT_SUCCESS(Status))
+	{
+		printf("Could not call INSPECTOR_LISTEN ioctl. (NTSTATUS: 0x%08X)", Status);
+		return Status;
+	}
+
+	return Status;
 }
 
-NTSTATUS InitializeDriver(PINSPECTOR_DRIVER Driver)
+NTSTATUS
+DriverRelease(
+	__in PINSPECTOR_DRIVER  Driver
+	)
 {
-    return NTSTATUS();
-}
-
-NTSTATUS DriverListen(PINSPECTOR_DRIVER Driver, PCIRCULAR_BUFFER Buffer)
-{
-    return NTSTATUS();
-}
-
-NTSTATUS DriverStop(PINSPECTOR_DRIVER Driver)
-{
-    return NTSTATUS();
+	assert(Driver->DeviceHandle != NULL);
+	return NtClose(Driver->DeviceHandle);
 }

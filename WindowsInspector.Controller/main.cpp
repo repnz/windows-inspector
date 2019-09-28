@@ -1,12 +1,13 @@
 #include <iostream>
 #include <Windows.h>
-#include "InspectorDriver.hpp"
-#include "EventFormatter.hpp"
 #include <vector>
 #include <string>
 #include <exception>
 #include <lib/args/args.hxx>
-#include <WindowsInspector.Controller\WindowsInspectorController.h>
+
+extern "C" { 
+	#include <WindowsInspector.Controller\WindowsInspectorController.h>
+}
 
 
 BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
@@ -52,7 +53,7 @@ void ListenCommand(args::Subparser& subParser)
 {
 	subParser.Parse();
 
-	WindowsInspectorController::Listen();
+	WindowsInspectorListen();
 }
 
 
@@ -63,7 +64,8 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 	case CTRL_C_EVENT:
 	case CTRL_CLOSE_EVENT:
 	case CTRL_BREAK_EVENT:
-		WindowsInspectorController::Stop();
+		WindowsInspectorStop();
+		
 		return TRUE;
 	default:
 		return FALSE;

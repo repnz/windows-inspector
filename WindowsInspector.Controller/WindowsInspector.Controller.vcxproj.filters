@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="WindowsInspectorController.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\WindowsInspector.Shared\Common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -27,7 +24,13 @@
     <ClCompile Include="InspectorDriver.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.c">
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsInspectorController.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\WindowsInspector.Shared\base64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

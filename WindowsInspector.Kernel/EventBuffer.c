@@ -21,7 +21,7 @@ static struct {
     union {
         PVOID KernelModeBase;
         PCIRCULAR_BUFFER CircularBuffer;
-    } DUMMYUNIONNAME;
+    };
     ULONG ClientProcessId;
     PVOID UserModeBase;
     LONG IsMapped;

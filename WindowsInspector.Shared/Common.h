@@ -1,12 +1,5 @@
 #pragma once
-
-#ifdef KERNEL_DRIVER
-#include <ntifs.h>
-#else
-#include <windows.h>
-#include <winioctl.h>
-#endif
-
+#include <WindowsInspector.Shared/Std.h>
 
 #define INSPECTOR_LISTEN_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x1, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #define INSPECTOR_STOP_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x2, METHOD_NEITHER, FILE_ANY_ACCESS)
@@ -51,6 +44,7 @@ typedef struct _APPENDIX_BUFFER {
 typedef struct _PROCESS_EXIT_EVENT {
     EVENT_HEADER Header;
 } PROCESS_EXIT_EVENT, * PPROCESS_EXIT_EVENT;
+
 
 typedef struct _PROCESS_CREATE_EVENT {
     EVENT_HEADER Header;
