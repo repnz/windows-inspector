@@ -298,7 +298,7 @@ AllocateBufferEvent(
     
     *EventPtr = (PEVENT_HEADER)((PUCHAR)g_Sync.KernelModeBase + g_Sync.HeapOffset);
     (*EventPtr)->Size = EventSize;
-    
+    RtlZeroMemory(*EventPtr, EventSize);
     g_Sync.HeapOffset += EventSize;
 
 cleanup:
@@ -394,4 +394,21 @@ CancelBufferEvent(
 
     InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, EventObj->Size);
     return STATUS_SUCCESS;
+}
+
+NTSTATUS 
+SendOrCancelBufferEvent(
+	__in PVOID Event
+	)
+{
+	NTSTATUS Status = SendBufferEvent(Event);
+
+	if (!NT_SUCCESS(Status))
+	{
+		//PCSTR EventTypeStr = Event_GetEventName((PEVENT_HEADER)Event);
+		D_ERROR_STATUS_ARGS("Could not send buffer event of type '%s'", Status, g_EventTypeStr);
+		CancelBufferEvent(Event);
+	}
+
+	return Status;
 }

@@ -60,15 +60,17 @@ OnProcessStart(
     // ProcessProvider 
     Event->NewProcessId = HandleToUlong(ProcessId);
     Event->ParentProcessId = HandleToUlong(CreateInfo->ParentProcessId);
+
     Event->CommandLine.Size = CreateInfo->CommandLine->Length;
+	Event->CommandLine.Offset = sizeof(PROCESS_CREATE_EVENT);
 
     RtlCopyMemory(
-        ProcessCreate_GetCommandLine(Event),
+        EVENT_GET_APPENDIX(Event, Event->CommandLine, PVOID),
         CreateInfo->CommandLine->Buffer,
         CreateInfo->CommandLine->Length
     );
 
-    SendBufferEvent(Event);
+	SendOrCancelBufferEvent(Event);
 }
 
 VOID
@@ -93,7 +95,7 @@ OnProcessExit(
     Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
     KeQuerySystemTimePrecise(&Event->Header.Time);
     
-    SendBufferEvent(Event);
+    SendOrCancelBufferEvent(Event);
 }
 
 VOID

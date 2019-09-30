@@ -223,6 +223,7 @@
     <ClCompile Include="KernelApi.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Providers\ImageLoadProvider.c" />
+    <ClCompile Include="Providers\ObjectHandleCallbacks.c" />
     <ClCompile Include="Providers\ProcessProvider.c" />
     <ClCompile Include="Providers\Providers.c" />
     <ClCompile Include="Providers\RegistryProvider.c" />
@@ -237,6 +238,7 @@
     <ClInclude Include="KernelApi.h" />
     <ClInclude Include="Providers\ImageCallbacks.hpp" />
     <ClInclude Include="Providers\ImageLoadProvider.h" />
+    <ClInclude Include="Providers\ObjectHandleCallbacks.h" />
     <ClInclude Include="Providers\ProcessCreation.hpp" />
     <ClInclude Include="Providers\ProcessProvider.h" />
     <ClInclude Include="Providers\Providers.h" />

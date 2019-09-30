@@ -1,6 +1,6 @@
 #include "Common.h"
 
-PCSTR CONST EventTypeStr[] =
+PCSTR CONST g_EventTypeStr[] =
 {
     "None",
     "ProcessCreate",
@@ -8,11 +8,12 @@ PCSTR CONST EventTypeStr[] =
     "ImageLoad",
     "ThreadCreate",
     "ThreadExit",
-    "RegistryEvent"
+    "RegistryEvent",
+	"ObjectHandleEvent"
 };
 
 
-PCSTR CONST RegistryEventTypeStr[] =
+PCSTR CONST g_RegistryEventTypeStr[] =
 {
     "DeleteKey",
     "SetValue",
@@ -21,7 +22,7 @@ PCSTR CONST RegistryEventTypeStr[] =
     "DeleteValue"
 };
 
-PCSTR CONST RegistryValueDataTypeStr[] =
+PCSTR CONST g_RegistryValueDataTypeStr[] =
 {
     "REG_NONE",
     "REG_SZ",

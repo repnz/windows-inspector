@@ -57,6 +57,9 @@
     <ClCompile Include="..\WindowsInspector.Shared\Common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Providers\ObjectHandleCallbacks.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Providers\ProcessCreation.hpp">
@@ -99,6 +102,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\WindowsInspector.Shared\Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Providers\ObjectHandleCallbacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

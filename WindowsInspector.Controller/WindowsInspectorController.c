@@ -29,16 +29,21 @@ WindowsInspectorListenLoop(
 		LONG Count = Buffer->Count;
 		LONG ReadMem = 0;
 		ULONG ReadOffset = Buffer->ReadOffset;
+		ULONG EventLength;
 
 		for (LONG i = 0; i < Count; i++)
 		{
 			// Handle event
 			PEVENT_HEADER Event = *(PEVENT_HEADER*)((PBYTE)Buffer->BaseAddress + ReadOffset);
-			Status = FmtDumpEvent(EventStringBuffer, EVENT_STRING_BUFFER_SIZE, Event);
+			Status = FmtDumpEvent(EventStringBuffer, &EventLength, EVENT_STRING_BUFFER_SIZE, Event);
 
 			if (!NT_SUCCESS(Status))
 			{
 				printf("Could not handle event 0x%p: 0x%08x", Event, Status);
+			}
+			else
+			{
+				printf("%.*s\n", EventLength, EventStringBuffer);
 			}
 
 			ReadMem += Event->Size;

@@ -128,10 +128,10 @@ SendRegistryEvent(
 
     // Initialize Key Name
 
-    Event->KeyName.Offset = KeyLength;
+    Event->KeyName.Offset = (USHORT)KeyLength;
     Event->KeyName.Size = sizeof(REGISTRY_EVENT);
 
-    Status = ZwQueryKey(KeyHandle, KeyNameInformation, RegistryEvent_GetKeyName(Event), KeyLength, NULL);
+    Status = ZwQueryKey(KeyHandle, KeyNameInformation, EVENT_GET_APPENDIX(Event, Event->KeyName, PVOID), KeyLength, NULL);
 
     if (!NT_SUCCESS(Status))
     {
@@ -145,7 +145,11 @@ SendRegistryEvent(
     {
         Event->ValueName.Offset = Event->KeyName.Offset + Event->KeyName.Size;
         Event->ValueName.Size = ValueName->Length;
-        RtlCopyMemory(RegistryEvent_GetValueName(Event), ValueName->Buffer, ValueName->Length);
+        RtlCopyMemory(
+			EVENT_GET_APPENDIX(Event, Event->ValueName, PVOID),
+			ValueName->Buffer,
+			ValueName->Length
+			);
     }
     else
     {
@@ -158,8 +162,12 @@ SendRegistryEvent(
     if (Data != NULL)
     {
         Event->ValueData.Offset = Event->ValueName.Offset + Event->ValueName.Size;
-        Event->ValueData.Size = DataSize;
-        RtlCopyMemory(RegistryEvent_GetValueData(Event), Data, DataSize);
+        Event->ValueData.Size = (USHORT)DataSize;
+        RtlCopyMemory(
+			RegistryEvent_GetValueData(Event),
+			Data,
+			DataSize
+			);
     }
     else
     {
@@ -172,7 +180,11 @@ SendRegistryEvent(
     {
         Event->NewName.Offset = Event->ValueData.Offset + Event->ValueData.Size;
         Event->NewName.Size = NewName->Length;
-        RtlCopyMemory(RegistryEvent_GetNewName(Event), NewName->Buffer, NewName->Length);
+        RtlCopyMemory(
+			EVENT_GET_APPENDIX(Event, Event->NewName, PVOID),
+			NewName->Buffer,
+			NewName->Length
+			);
     }
     else 
     {
@@ -188,7 +200,7 @@ SendRegistryEvent(
     Event->ValueType = ValueType;
     Event->SubType = EventSubType;
 
-    SendBufferEvent(Event);
+	SendOrCancelBufferEvent(Event);
 
 cleanup:
     if (!NT_SUCCESS(Status))

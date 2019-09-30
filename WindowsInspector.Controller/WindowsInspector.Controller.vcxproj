@@ -100,7 +100,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir); $(SolutionDir)\lib</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>;4005</DisableSpecificWarnings>
+      <DisableSpecificWarnings>;4005;4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SetChecksum>true</SetChecksum>
@@ -115,7 +115,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir); $(SolutionDir)\lib</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <DisableSpecificWarnings>26440;%(DisableSpecificWarnings);4005</DisableSpecificWarnings>
+      <DisableSpecificWarnings>26440;%(DisableSpecificWarnings);4005;4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SetChecksum>true</SetChecksum>
@@ -131,7 +131,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir); $(SolutionDir)\lib</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>;4005</DisableSpecificWarnings>
+      <DisableSpecificWarnings>;4005;4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -150,7 +150,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir); $(SolutionDir)\lib</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <DisableSpecificWarnings>26440;%(DisableSpecificWarnings);4005</DisableSpecificWarnings>
+      <DisableSpecificWarnings>26440;%(DisableSpecificWarnings);4005;4201</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

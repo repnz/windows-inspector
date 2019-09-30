@@ -116,8 +116,9 @@ OnThreadCreate(
     Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
     Event->NewThreadId = TargetThreadId;
     Event->TargetProcessId = TargetProcessId;
-
-    SendBufferEvent(Event);
+	Event->StartAddress = StartAddress;
+	
+	SendOrCancelBufferEvent(Event);
 }
 
 
@@ -142,7 +143,7 @@ OnThreadExit(
     Event->Header.ThreadId = ThreadId;
     Event->Header.ProcessId = ProcessId;
 
-    SendBufferEvent(Event);
+	SendOrCancelBufferEvent(Event);
 }
 
 VOID 

@@ -33,4 +33,7 @@ CancelBufferEvent(
     __in PVOID Event
     );
 
-
+NTSTATUS
+SendOrCancelBufferEvent(
+	__in PVOID Event
+	);

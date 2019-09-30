@@ -65,7 +65,11 @@ OnImageLoadNotify(
     }
 
     Event->ImageFileName.Size = FixedFullImageSize;
-    RtlCopyMemory(ImageLoad_GetImageName(Event), FixedFullImageName, FixedFullImageSize);
+	Event->ImageFileName.Offset = sizeof(IMAGE_LOAD_EVENT);
+
+	PVOID ImageFileNamePtr = EVENT_GET_APPENDIX(Event, Event->ImageFileName, PVOID);
+
+    RtlCopyMemory(ImageFileNamePtr, FixedFullImageName, FixedFullImageSize);
     
     // Common Data
     Event->Header.Type = EvtImageLoad;
@@ -77,5 +81,5 @@ OnImageLoadNotify(
     Event->ImageSize = ImageInfo->ImageSize;
     Event->LoadAddress = ImageInfo->ImageBase;
 
-    SendBufferEvent(Event);
+	SendOrCancelBufferEvent(Event);
 }

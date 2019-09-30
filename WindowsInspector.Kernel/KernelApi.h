@@ -28,3 +28,22 @@ GetProcessHandleById(
     __in ULONG ProcessId,
     __out PHANDLE ProcessHandle
     );
+
+
+FORCEINLINE
+ULONG
+GetProcessId(
+	PVOID ProcessObject
+	)
+{
+	return HandleToUlong(PsGetProcessId((PEPROCESS)ProcessObject));
+}
+
+FORCEINLINE
+ULONG
+GetThreadId(
+	PVOID ThreadObject
+	)
+{
+	return HandleToUlong(PsGetThreadId((PETHREAD)ThreadObject));
+}
