@@ -22,6 +22,11 @@ DriverUnload(
     __in PDRIVER_OBJECT DriverObject
     );
 
+
+
+static UNICODE_STRING gDeviceName = RTL_CONSTANT_STRING(L"\\Device\\WindowsInspector");
+static UNICODE_STRING gSymbolicLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
+
 NTSTATUS 
 DriverEntry(
     __in PDRIVER_OBJECT DriverObject,
@@ -32,6 +37,9 @@ DriverEntry(
 	UNREFERENCED_PARAMETER(DriverObject);
 	UNREFERENCED_PARAMETER(RegistryPath);
 
+	NTSTATUS Status = STATUS_SUCCESS;	
+	BOOLEAN InitializedDeviceObject = FALSE;
+
     D_INFO("Driver Is Starting!");
     D_INFO("Initializing Kernel API...");
 
@@ -40,34 +48,29 @@ DriverEntry(
 		D_ERROR("Could not initialize kernel API");
 		return STATUS_NOT_SUPPORTED;
 	}
-    
-	NTSTATUS Status = STATUS_SUCCESS;
-
-	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
-	UNICODE_STRING devName = RTL_CONSTANT_STRING(L"\\Device\\WindowsInspector");
-
-	D_INFO("Creating Device...");
 
     InitializeIoctlHandlers();
     
-    // ExclusiveAccess: TRUE
-	Status = IoCreateDevice(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, TRUE, &g_DeviceObject);
+	D_INFO("Creating Device...");
 
+	Status = IoCreateDevice(DriverObject, 0, &gDeviceName, FILE_DEVICE_UNKNOWN, 0, TRUE, &gDeviceObject);
+	
 	if (!NT_SUCCESS(Status))
 	{
 		D_ERROR_STATUS("Failed to create device", Status);
-        return Status;
+		goto cleanup;
 	}
      
+	InitializedDeviceObject = TRUE;
+
 	D_INFO("Creating Symbolic Link..");
 
-	Status = IoCreateSymbolicLink(&symLink, &devName);
+	Status = IoCreateSymbolicLink(&gSymbolicLink, &gDeviceName);
 
 	if (!NT_SUCCESS(Status))
 	{
 		D_ERROR_STATUS("Failed to create symbolic link", Status);
-        IoDeleteDevice(g_DeviceObject);
-        return Status;
+        goto cleanup;
 	}
 
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIoControlDispatch;
@@ -75,7 +78,18 @@ DriverEntry(
 	DriverObject->MajorFunction[IRP_MJ_CLOSE] = DefaultDispatch;
 	DriverObject->DriverUnload = DriverUnload;
 
-    D_INFO("Completed DriverEntry Successfully");
+cleanup:
+	if (!NT_SUCCESS(Status))
+	{
+		if (InitializedDeviceObject)
+		{
+			IoDeleteDevice(gDeviceObject);
+		}
+	}
+	else
+	{
+		D_INFO("Completed DriverEntry Successfully");
+	}
 
 	return Status;
 }
@@ -89,8 +103,7 @@ DriverUnload(
 	D_INFO("DriverUnload");
 
 	// Remove Device
-	UNICODE_STRING symLink = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
-	IoDeleteSymbolicLink(&symLink);
+	IoDeleteSymbolicLink(&gSymbolicLink);
 	IoDeleteDevice(DriverObject->DeviceObject);
 }
 

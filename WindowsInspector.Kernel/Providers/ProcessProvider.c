@@ -2,9 +2,11 @@
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
 #include "ProcessProvider.h"
+#include <WindowsInspector.Kernel/ProcessNotifyWrapper.h>
+#include "Providers.h"
 
-VOID
-OnProcessNotify(
+BOOLEAN
+ProcessProviderOnProcessNotify(
     __inout PEPROCESS, 
     __in HANDLE ProcessId, 
     __inout_opt PPS_CREATE_NOTIFY_INFO CreateInfo
@@ -15,27 +17,27 @@ InitializeProcessProvider(
     VOID
     )
 {
-    return PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, FALSE);
+    AddProcessNotifyRoutine(&ProcessProviderOnProcessNotify);
+	return STATUS_SUCCESS;
 }
 
-NTSTATUS 
+VOID 
 ReleaseProcessProvider(
     VOID
     )
 {
-    PsSetCreateProcessNotifyRoutineEx(OnProcessNotify, TRUE);
-    return STATUS_SUCCESS;
+	RemoveProcessNotifyRoutine(&ProcessProviderOnProcessNotify);
 }
 
 VOID 
-OnProcessStart(
+ProcessProviderOnProcessStart(
     __in HANDLE ProcessId,
     __inout PPS_CREATE_NOTIFY_INFO CreateInfo
     )
 {
     PPROCESS_CREATE_EVENT Event;
     NTSTATUS Status;
-
+	
     if (CreateInfo->CommandLine == NULL)
     {
         D_ERROR("Failed to log ProcessCreateInfo: CommandLine is NULL");
@@ -52,7 +54,7 @@ OnProcessStart(
     }
 
     // Init Common
-    Event->Header.Type = EvtProcessCreate;
+    Event->Header.Type = EvtTypeProcessCreate;
     Event->Header.ProcessId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueProcess);
     Event->Header.ThreadId = HandleToUlong(CreateInfo->CreatingThreadId.UniqueThread);
     KeQuerySystemTimePrecise(&Event->Header.Time);
@@ -74,7 +76,7 @@ OnProcessStart(
 }
 
 VOID
-OnProcessExit(
+ProcessProviderOnProcessExit(
     __in HANDLE ProcessId
     )
 {
@@ -85,12 +87,12 @@ OnProcessExit(
 
     if (!NT_SUCCESS(Status))
     {
-        D_ERROR("Failed to allocate memory for ProcessExitInfo: ProcessId=%d");
+        D_ERROR_STATUS_ARGS("Failed to allocate memory for ProcessExitInfo: ProcessId=%d", Status, HandleToUlong(ProcessId));
         return;
     }
 
     // Init Common
-    Event->Header.Type = EvtProcessExit;
+    Event->Header.Type = EvtTypeProcessExit;
     Event->Header.ProcessId = HandleToUlong(ProcessId);
     Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
     KeQuerySystemTimePrecise(&Event->Header.Time);
@@ -98,8 +100,8 @@ OnProcessExit(
     SendOrCancelBufferEvent(Event);
 }
 
-VOID
-OnProcessNotify(
+BOOLEAN
+ProcessProviderOnProcessNotify(
     __inout PEPROCESS ProcessObject, 
     __in HANDLE ProcessId, 
     __inout_opt PPS_CREATE_NOTIFY_INFO CreateInfo
@@ -107,12 +109,19 @@ OnProcessNotify(
 {
     UNREFERENCED_PARAMETER(ProcessObject);
 
+	if (!g_Listening)
+	{
+		return TRUE;
+	}
+
     if (CreateInfo)
     {
-        OnProcessStart(ProcessId, CreateInfo);
+		ProcessProviderOnProcessStart(ProcessId, CreateInfo);
     }
     else
     {
-        OnProcessExit(ProcessId);
+        ProcessProviderOnProcessExit(ProcessId);
     }
+
+	return TRUE;
 }

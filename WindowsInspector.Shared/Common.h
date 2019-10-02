@@ -5,13 +5,13 @@
 #define INSPECTOR_STOP_CTL_CODE CTL_CODE(FILE_DEVICE_UNKNOWN, 0x2, METHOD_NEITHER, FILE_ANY_ACCESS)
 
 typedef enum _EVT_TYPE {
-    EvtNone,
-    EvtProcessCreate,
-    EvtProcessExit,
-    EvtImageLoad,
-    EvtThreadCreate,
-    EvtThreadExit,
-    EvtRegistryEvent,
+    EvtTypeNone,
+    EvtTypeProcessCreate,
+    EvtTypeProcessExit,
+    EvtTypeImageLoad,
+    EvtTypeThreadCreate,
+    EvtTypeThreadExit,
+    EvtTypeRegistryEvent,
 	EvtObjectHandleEvent
 } EVT_TYPE, *PEVT_TYPE;
 
@@ -209,13 +209,13 @@ typedef enum _OBJECT_HANDLE_EVENT_TYPE {
 } OBJECT_HANDLE_EVENT_TYPE, *POBJECT_HANDLE_EVENT_TYPE;
 
 typedef enum _OBJECT_HANDLE_OPERATION_TYPE {
-	EvtObCreateHandle,
-	EvtObDuplicateHandle,
+	ObOpTypeCreateHandle,
+	ObOpDuplicateHandle,
 } OBJECT_HANDLE_OPERATION_TYPE, *POBJECT_HANDLE_OPERATION_TYPE;
 
 typedef enum _OBJECT_HANDLE_OBJECT_TYPE {
-	EvtObProcess,
-	EvtObThread
+	ObProcessHandle,
+	ObThreadHandle
 } OBJECT_HANDLE_OBJECT_TYPE, *POBJECT_HANDLE_OBJECT_TYPE;
 
 // The base of all object handle events
@@ -232,12 +232,12 @@ typedef struct _OBJECT_HANDLE_EVENT {
 		struct {
 			ULONG SourceProcessId;
 			ULONG TargetProcessId;
-		} DuplicateParameters;
+		} Duplicate;
 
 		struct {
 			NTSTATUS ReturnStatus;
-		} PostEventParameters;
-	};
+		} PostEvent;
+	} Parameters;
 } OBJECT_HANDLE_EVENT, *POBJECT_HANDLE_EVENT;
 
 

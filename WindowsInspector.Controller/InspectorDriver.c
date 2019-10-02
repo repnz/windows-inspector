@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define DEVICE_NAME L"\\\\.\\WindowsInspector"
 
 NTSTATUS
 DriverInitialize(
@@ -13,7 +12,7 @@ DriverInitialize(
     NTSTATUS Status;
     OBJECT_ATTRIBUTES DeviceObjectAttributes;
     IO_STATUS_BLOCK IoStatus;
-	UNICODE_STRING DeviceName = RTL_CONSTANT_STRING(DEVICE_NAME);
+	UNICODE_STRING DeviceName = RTL_CONSTANT_STRING(L"\\??\\WindowsInspector");
 
 	InitializeObjectAttributes(&DeviceObjectAttributes, &DeviceName, 0, NULL, NULL);
 	
@@ -24,8 +23,8 @@ DriverInitialize(
         &DeviceObjectAttributes,
         &IoStatus,
         NULL,
+		FILE_ATTRIBUTE_NORMAL,
         0,
-        FILE_ATTRIBUTE_NORMAL,
         FILE_OPEN,
         FILE_NON_DIRECTORY_FILE,
         NULL,

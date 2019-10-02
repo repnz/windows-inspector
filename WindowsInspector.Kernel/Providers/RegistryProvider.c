@@ -3,6 +3,7 @@
 #include <WindowsInspector.Kernel/DriverObject.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
+#include "Providers.h"
 
 NTSTATUS 
 RegistryCallback(
@@ -32,12 +33,13 @@ InitializeRegistryProvider(
     return Status;
 }
 
-NTSTATUS 
+VOID 
 ReleaseRegistryProvider(
     VOID
 )
 {
-    return CmUnRegisterCallback(g_RegistryCookie);
+    CmUnRegisterCallback(g_RegistryCookie);
+	RtlSecureZeroMemory(&g_RegistryCookie, sizeof(g_RegistryCookie));
 }
 
 static
@@ -60,8 +62,8 @@ SendRegistryEvent(
     HANDLE KeyHandle = NULL;
     ULONG KeyLength = 0;
     USHORT RegistryEventLength = sizeof(REGISTRY_EVENT);
-    PREGISTRY_EVENT Event;
-
+    PREGISTRY_EVENT Event = NULL;
+	
     if (KeyObject == NULL)
     {
         Status = STATUS_INVALID_PARAMETER;
@@ -192,7 +194,7 @@ SendRegistryEvent(
         Event->NewName.Size = 0;
     }
 
-    Event->Header.Type = EvtRegistryEvent;
+    Event->Header.Type = EvtTypeRegistryEvent;
     Event->Header.ProcessId = HandleToUlong(PsGetCurrentProcessId());
     Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
     Event->Header.Time = Time;
@@ -206,6 +208,11 @@ cleanup:
     if (!NT_SUCCESS(Status))
     {
         D_ERROR_STATUS_ARGS("Could not send RegistryEvent of type '%s'", Status, REG_EVENT_SUB_TYPE_STR(EventSubType));
+
+		if (Event)
+		{
+			CancelBufferEvent(Event);
+		}
     }
 
     if (KeyHandle != NULL)
@@ -358,6 +365,11 @@ RegistryCallback(
     )
 {
     UNREFERENCED_PARAMETER(CallbackContext);
+
+	if (!g_Listening)
+	{
+		return STATUS_SUCCESS;
+	}
 
     ULONG* ArgumentUlong = (ULONG*)&Argument1;
     REG_NOTIFY_CLASS TypeClass = (REG_NOTIFY_CLASS)*ArgumentUlong;

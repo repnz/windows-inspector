@@ -3,6 +3,7 @@
 #include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
 #include "ThreadProvider.h"
+#include "Providers.h"
 
 VOID
 OnThreadNotify(
@@ -19,13 +20,12 @@ InitializeThreadProvider(
     return PsSetCreateThreadNotifyRoutine(OnThreadNotify);
 }
 
-NTSTATUS
+VOID
 ReleaseThreadProvider(
     VOID
     )
 {
     PsRemoveCreateThreadNotifyRoutine(OnThreadNotify);
-    return STATUS_SUCCESS;
 }
 
 NTSTATUS 
@@ -35,15 +35,16 @@ GetThreadWin32StartAddress(
     )
 {
     NTSTATUS Status;
-    HANDLE CreatingThreadObjectHandle;
+    HANDLE CreatingThreadObjectHandle = NULL;
+    PETHREAD Thread = NULL;
 
-    PETHREAD thread;
-    Status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &thread);
+
+    Status = PsLookupThreadByThreadId(UlongToHandle(ThreadId), &Thread);
 
     if (!NT_SUCCESS(Status))
     {
         D_ERROR_STATUS_ARGS("Failed to find thread with id %d", Status, ThreadId);
-        return Status;
+        goto cleanup;
     }
 
     Status = ObOpenObjectByPointer(
@@ -56,12 +57,12 @@ GetThreadWin32StartAddress(
         &CreatingThreadObjectHandle
     );
 
-    ObDereferenceObject(thread);
+    ObDereferenceObject(Thread);
 
     if (!NT_SUCCESS(Status))
     {
         D_ERROR_STATUS("Failed to create a handle to the new thread", Status);
-        return Status;
+        goto cleanup;
     }
 
     Status = ZwQueryInformationThread(
@@ -75,9 +76,16 @@ GetThreadWin32StartAddress(
     if (!NT_SUCCESS(Status))
     {
         D_ERROR_STATUS_ARGS("Cannot query thread start address %d", Status, ThreadId);
+		goto cleanup;
     }
 
-    ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
+cleanup:
+	
+	if (CreatingThreadObjectHandle)
+	{
+		ObCloseHandle(CreatingThreadObjectHandle, KernelMode);
+	}
+
     return Status;
 }
 
@@ -109,7 +117,7 @@ OnThreadCreate(
     }
 
     
-    Event->Header.Type = EvtThreadCreate;
+    Event->Header.Type = EvtTypeThreadCreate;
     KeQuerySystemTimePrecise(&Event->Header.Time);
 
     Event->Header.ProcessId = HandleToUlong(PsGetCurrentProcessId());
@@ -129,8 +137,9 @@ OnThreadExit(
     )
 {
     PTHREAD_EXIT_EVENT Event;
+    NTSTATUS Status;
 
-    NTSTATUS Status = AllocateBufferEvent(&Event, sizeof(THREAD_EXIT_EVENT));
+	Status = AllocateBufferEvent(&Event, sizeof(THREAD_EXIT_EVENT));
 
     if (!NT_SUCCESS(Status))
     {
@@ -138,7 +147,7 @@ OnThreadExit(
         return;
     }
 
-    Event->Header.Type = EvtThreadExit;
+    Event->Header.Type = EvtTypeThreadExit;
     KeQuerySystemTimePrecise(&Event->Header.Time);
     Event->Header.ThreadId = ThreadId;
     Event->Header.ProcessId = ProcessId;
@@ -153,6 +162,10 @@ OnThreadNotify(
     __in BOOLEAN Create
     )
 {
+	if (!g_Listening)
+	{
+		return;
+	}
 
     if (Create)
     {

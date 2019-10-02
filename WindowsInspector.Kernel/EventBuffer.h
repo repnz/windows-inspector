@@ -12,7 +12,7 @@ InitializeEventBuffer(
     __out PCIRCULAR_BUFFER* CircularBufferAddress
     );
 
-NTSTATUS 
+VOID 
 FreeEventBuffer(
     VOID
     );

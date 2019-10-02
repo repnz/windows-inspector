@@ -7,7 +7,7 @@ InitializeImageLoadProvider(
     VOID
     );
 
-NTSTATUS 
+VOID 
 ReleaseImageLoadProvider(
     VOID
     );

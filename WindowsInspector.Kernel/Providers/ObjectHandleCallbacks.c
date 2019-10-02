@@ -2,6 +2,7 @@
 #include <WindowsInspector.Kernel/EventBuffer.h>
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Kernel/KernelApi.h>
+#include "Providers.h"
 
 static HANDLE RegistrationHandle = NULL;
 
@@ -41,16 +42,16 @@ InitializeHandleEvent(
 	// Initialize Handle Information
 	Event->IsKernelHandle = (KernelHandle != 0) ? TRUE : FALSE;
 	Event->EventType = EventType;
-	Event->OperationType = (Operation == OB_OPERATION_HANDLE_CREATE) ? EvtObCreateHandle : EvtObDuplicateHandle;
+	Event->OperationType = (Operation == OB_OPERATION_HANDLE_CREATE) ? ObOpTypeCreateHandle : ObOpDuplicateHandle;
 
 	if (ObjectType == *PsProcessType)
 	{
-		Event->ObjectType = EvtObProcess;
+		Event->ObjectType = ObProcessHandle;
 		Event->ObjectId = GetProcessId(Object);
 	}
 	else
 	{
-		Event->ObjectType = EvtObThread;
+		Event->ObjectType = ObThreadHandle;
 		Event->ObjectId = GetThreadId(Object);
 	}
 
@@ -93,10 +94,10 @@ PreOperationCallback(
 		Event->Access = OperationInformation->Parameters->DuplicateHandleInformation.OriginalDesiredAccess;
 		
 		CONST PVOID SourceProcess = OperationInformation->Parameters->DuplicateHandleInformation.SourceProcess;
-		Event->DuplicateParameters.SourceProcessId = GetProcessId(SourceProcess);
+		Event->Parameters.Duplicate.SourceProcessId = GetProcessId(SourceProcess);
 
 		CONST PVOID TargetProcess = OperationInformation->Parameters->DuplicateHandleInformation.TargetProcess;
-		Event->DuplicateParameters.TargetProcessId = GetProcessId(TargetProcess);
+		Event->Parameters.Duplicate.TargetProcessId = GetProcessId(TargetProcess);
 	}
 
 	SendOrCancelBufferEvent(Event);
@@ -140,14 +141,14 @@ PostOperationCallback(
 		Event->Access = OperationInformation->Parameters->DuplicateHandleInformation.GrantedAccess;
 	}
 
-	Event->PostEventParameters.ReturnStatus = OperationInformation->ReturnStatus;
+	Event->Parameters.PostEvent.ReturnStatus = OperationInformation->ReturnStatus;
 
 	SendOrCancelBufferEvent(Event);
 }
 
 
 NTSTATUS
-InitializeObjectHandleCallbacks(
+InitializeHandleCallbacksProvider(
 	VOID
 	)
 {
@@ -177,17 +178,20 @@ InitializeObjectHandleCallbacks(
 }
 
 
-NTSTATUS
-ReleaseObjectHandleCallbacks(
+VOID
+ReleaseHandleCallbacksProvider(
 	VOID
 	)
 {
+	if (!g_Listening)
+	{
+		return;
+	}
 	if (RegistrationHandle == NULL)
 	{
-		return STATUS_UNSUCCESSFUL;
+		return;
 	}
 
 	ObUnRegisterCallbacks(RegistrationHandle);
 	RegistrationHandle = NULL;
-	return STATUS_SUCCESS;
 }

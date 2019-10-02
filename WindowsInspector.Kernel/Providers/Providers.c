@@ -4,6 +4,9 @@
 #include "ProcessProvider.h"
 #include "ImageLoadProvider.h"
 #include "RegistryProvider.h"
+#include "ObjectHandleCallbacks.h"
+
+BOOLEAN g_Listening = FALSE;
 
 typedef enum _PROVIDER_STATE {
     ProviderStateNotRunning,
@@ -13,38 +16,44 @@ typedef enum _PROVIDER_STATE {
 
 
 typedef struct _PROVIDER_DESCRIPTOR {
-    NTSTATUS(*Start)();
-    NTSTATUS(*Stop)();
-    PCWSTR ProviderName;
+    NTSTATUS (*Start)();
+    VOID (*Stop)();
+    PSTR ProviderName;
     PROVIDER_STATE State;
 } PROVIDER_DESCRIPTOR, * PPROVIDER_DESCRIPTOR;
 
 
 PROVIDER_DESCRIPTOR Providers[] = {
     {
-        InitializeProcessProvider,
-        ReleaseProcessProvider,
-        L"ProcessProvider",
-        ProviderStateNotRunning
+        .Start        = InitializeProcessProvider,
+        .Stop         = ReleaseProcessProvider,
+        .ProviderName = "ProcessProvider",
+        .State        = ProviderStateNotRunning
     },
     {
-        InitializeImageLoadProvider,
-        ReleaseImageLoadProvider,
-        L"ImageLoadProvider",
-        ProviderStateDisabled
+        .Start        = InitializeImageLoadProvider,
+        .Stop         = ReleaseImageLoadProvider,
+        .ProviderName = "ImageLoadProvider",
+        .State        = ProviderStateDisabled
     },
     {
-        InitializeThreadProvider,
-        ReleaseThreadProvider,
-        L"ThreadProvider",
-        ProviderStateDisabled
+        .Start        = InitializeThreadProvider,
+        .Stop         = ReleaseThreadProvider,
+        .ProviderName = "ThreadProvider",
+        .State        = ProviderStateDisabled
     },
     {
-        InitializeRegistryProvider,
-        ReleaseRegistryProvider,
-        L"RegistryProvider",
-        ProviderStateDisabled
-    }
+        .Start        = InitializeRegistryProvider,
+        .Stop         = ReleaseRegistryProvider,
+        .ProviderName = "RegistryProvider",
+        .State        = ProviderStateDisabled
+    },
+	{
+		.Start        = InitializeHandleCallbacksProvider,
+		.Stop         = ReleaseHandleCallbacksProvider,
+		.ProviderName = "HandleCallbacksProvider",
+		.State        = ProviderStateDisabled
+	}
 };
 
 CONST SIZE_T NumberOfProviders = sizeof(Providers) / sizeof(PROVIDER_DESCRIPTOR);
@@ -53,22 +62,23 @@ NTSTATUS
 InitializeProviders()
 {
     NTSTATUS Status = STATUS_SUCCESS;
-    
+    D_INFO("Initializing Providers...");
+
     for (ULONG i = 0; i < NumberOfProviders; i++)
     {
         if (Providers[i].State == ProviderStateDisabled)
         {
-            D_INFO_ARGS("Provider \"%ws\" is disabled.", Providers[i].ProviderName);
+            D_INFO_ARGS("Provider \"%s\" is disabled.", Providers[i].ProviderName);
             continue;
         }
         
-        D_INFO_ARGS("Initializing Provider \"%ws\"", Providers[i].ProviderName);
+        D_INFO_ARGS("Initializing Provider \"%s\"", Providers[i].ProviderName);
 
         Status = Providers[i].Start();
 
         if (!NT_SUCCESS(Status))
         {
-            D_ERROR_STATUS_ARGS("Could not initialize provider \"%ws\"", Status, Providers[i].ProviderName);
+            D_ERROR_STATUS_ARGS("Could not initialize provider \"%s\"", Status, Providers[i].ProviderName);
             
             FreeProviders();
 
@@ -81,27 +91,17 @@ InitializeProviders()
     return Status;
 }
 
-NTSTATUS
+VOID
 FreeProviders()
 {
-    NTSTATUS Status;
+	g_Listening = FALSE;
 
     for (ULONG i = 0; i < NumberOfProviders; i++)
     {
         if (Providers[i].State == ProviderStateRunning)
         {
-            Status = Providers[i].Stop();
-
-            if (!NT_SUCCESS(Status))
-            {
-                D_ERROR_STATUS_ARGS("Could not free provider %ws.", Status, Providers[i].ProviderName);
-                return Status;
-            }
-            
+            Providers[i].Stop();
             Providers[i].State = ProviderStateNotRunning;
         }
     }
-
-    return STATUS_SUCCESS;
-    
 }

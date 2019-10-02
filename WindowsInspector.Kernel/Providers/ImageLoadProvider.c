@@ -1,3 +1,4 @@
+#include "Providers.h"
 #include <WindowsInspector.Kernel/Debug.h>
 #include <WindowsInspector.Shared/Common.h>
 #include <WindowsInspector.Kernel/EventBuffer.h>
@@ -18,13 +19,12 @@ InitializeImageLoadProvider(
     return PsSetLoadImageNotifyRoutine(OnImageLoadNotify);
 }
 
-NTSTATUS 
+VOID 
 ReleaseImageLoadProvider(
     VOID
     )
 {
     PsRemoveLoadImageNotifyRoutine(OnImageLoadNotify);
-    return STATUS_SUCCESS;
 }
 
 CONST WCHAR Unknown[] = L"(Unknown)";
@@ -37,6 +37,9 @@ OnImageLoadNotify(
     __in PIMAGE_INFO ImageInfo
 )
 {
+	if (!g_Listening)
+		return;
+
     NTSTATUS Status;
     USHORT FixedFullImageSize = 0;
     PCWSTR FixedFullImageName;
@@ -72,7 +75,7 @@ OnImageLoadNotify(
     RtlCopyMemory(ImageFileNamePtr, FixedFullImageName, FixedFullImageSize);
     
     // Common Data
-    Event->Header.Type = EvtImageLoad;
+    Event->Header.Type = EvtTypeImageLoad;
     Event->Header.ProcessId = HandleToUlong(ProcessId);
     Event->Header.ThreadId = HandleToUlong(PsGetCurrentThreadId());
     KeQuerySystemTimePrecise(&Event->Header.Time);

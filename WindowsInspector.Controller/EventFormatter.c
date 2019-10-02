@@ -341,27 +341,27 @@ FmtDumpEvent(
 
 	switch (Event->Type)
 	{
-	case EvtProcessExit:
+	case EvtTypeProcessExit:
 		Status = DumpProcessExitEvent((PPROCESS_EXIT_EVENT)Event, &Stream);
 		break;
 
-	case EvtProcessCreate:
+	case EvtTypeProcessCreate:
 		Status = DumpProcessCreateEvent((PPROCESS_CREATE_EVENT)Event, &Stream);
 		break;
 
-	case EvtThreadCreate:
+	case EvtTypeThreadCreate:
 		Status = DumpThreadCreateEvent((PTHREAD_CREATE_EVENT)Event, &Stream);
 		break;
 
-	case EvtThreadExit:
+	case EvtTypeThreadExit:
 		Status = DumpThreadExitEvent((PTHREAD_EXIT_EVENT)Event, &Stream);
 		break;
 
-	case EvtImageLoad:
+	case EvtTypeImageLoad:
 		Status = DumpImageLoadEvent((PIMAGE_LOAD_EVENT)Event, &Stream);
 		break;
 
-	case EvtRegistryEvent:
+	case EvtTypeRegistryEvent:
 		Status = DumpRegistryEvent((PREGISTRY_EVENT)Event, &Stream);
 		break;
 

@@ -12,6 +12,7 @@ InspectorListen(
     __in PIO_STACK_LOCATION IoStackLocation
     );
 
-NTSTATUS InspectorStop(
+NTSTATUS
+InspectorStop(
     VOID
     );

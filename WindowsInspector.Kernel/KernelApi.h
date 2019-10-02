@@ -47,3 +47,22 @@ GetThreadId(
 {
 	return HandleToUlong(PsGetThreadId((PETHREAD)ThreadObject));
 }
+
+FORCEINLINE
+VOID
+UnlockFreeMdl(
+	PMDL Mdl
+	)
+{
+	MmUnlockPages(Mdl);
+	IoFreeMdl(Mdl);
+}
+
+NTSTATUS
+MapUserModeAddressToSystemSpace(
+	__in PVOID Buffer,
+	__in ULONG Length,
+	__in LOCK_OPERATION Operation,
+	__out PMDL* OutputMdl,
+	__out PVOID* MappedBuffer
+);

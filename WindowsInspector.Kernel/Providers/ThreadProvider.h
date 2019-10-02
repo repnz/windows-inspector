@@ -2,7 +2,11 @@
 #include <ntifs.h>
 
 NTSTATUS 
-InitializeThreadProvider();
+InitializeThreadProvider(
+	VOID
+	);
 
-NTSTATUS
-ReleaseThreadProvider();
+VOID
+ReleaseThreadProvider(
+	VOID
+	);

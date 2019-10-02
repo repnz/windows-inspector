@@ -6,7 +6,7 @@ InitializeProcessProvider(
     VOID
     );
 
-NTSTATUS
+VOID
 ReleaseProcessProvider(
     VOID
     );

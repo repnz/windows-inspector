@@ -2,11 +2,11 @@
 #include <ntifs.h>
 
 NTSTATUS
-InitializeObjectHandleCallbacks(
+InitializeHandleCallbacksProvider(
 	VOID
 	);
 
-NTSTATUS
-ReleaseObjectHandleCallbacks(
+VOID
+ReleaseHandleCallbacksProvider(
 	VOID
 	);

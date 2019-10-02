@@ -2,6 +2,7 @@
 #include <WindowsInspector.Shared/Common.h>
 #include "Debug.h"
 #include "KernelApi.h"
+#include "ProcessNotifyWrapper.h"
 
 // 20 mb
 #define BUFFER_SIZE (20 * 1024 * 1024)
@@ -16,6 +17,7 @@
 #define POINTER_BUFFER_OFFSET sizeof(CIRCULAR_BUFFER)
 #define HEAP_OFFSET (POINTER_BUFFER_OFFSET + POINTER_BUFFER_SIZE)
 
+
 static struct {
     PMDL Mdl;
     union {
@@ -23,9 +25,10 @@ static struct {
         PCIRCULAR_BUFFER CircularBuffer;
     };
     ULONG ClientProcessId;
+	HANDLE ClientProcessHandle;
     PVOID UserModeBase;
     LONG IsMapped;
-    KEVENT EventObject;
+    PKEVENT EventObject;
     SIZE_T BufferSize;
     LONG LastPadding;
     FAST_MUTEX HeapWriterMutex;
@@ -35,223 +38,308 @@ static struct {
 } g_Sync;
 
 
-NTSTATUS 
-ZeroEventBuffer(
-    VOID
-    )
-{
-    RtlZeroMemory(&g_Sync, sizeof(g_Sync));
+//
+// Functions to manage the user mode event object
+//
+static
+NTSTATUS
+CreateUserModeNotificationEvent(
+	VOID
+);
 
-    return STATUS_SUCCESS;
+static
+VOID
+FreeUserModeNotificationEvent(
+	VOID
+);
+
+
+
+//
+// Functions to manage the user mode buffer and mapping to system space
+//
+static
+NTSTATUS
+AllocateBufferMemory(
+	VOID
+);
+
+
+static
+VOID
+FreeBufferMemory(
+	VOID
+);
+
+
+
+static
+BOOLEAN
+EventBufferOnProcessNotify(
+	__inout PEPROCESS Process,
+	__in HANDLE ProcessId,
+	__inout_opt PPS_CREATE_NOTIFY_INFO CreateInfo
+	)
+{
+	UNREFERENCED_PARAMETER(Process);
+
+	// Ignore process creation
+	if (CreateInfo)
+		return TRUE;
+
+	if (HandleToUlong(ProcessId) == g_Sync.ClientProcessId) 
+	{	
+		FreeEventBuffer();
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
-NTSTATUS 
-FreeEventBuffer(
-    VOID
-    )
-{
-    NTSTATUS Status = STATUS_SUCCESS;
-    HANDLE ProcessHandle = NULL;
-
-    if (!g_Sync.IsMapped)
-    {
-        return STATUS_SUCCESS;
-    }
-
-    MmUnlockPages(g_Sync.Mdl);
-    IoFreeMdl(g_Sync.Mdl);
-    
-    Status = GetProcessHandleById(g_Sync.ClientProcessId, &ProcessHandle);
-    
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS_ARGS("Could not get a handle to process %d to free allocation", Status, g_Sync.ClientProcessId);
-        return Status;
-    }
-
-    Status = ZwFreeVirtualMemory(ProcessHandle, &g_Sync.UserModeBase, NULL, MEM_RELEASE);
-
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS("ZwFreeVirtualMemory failed to free allocation.", Status);
-    }
-
-    ObCloseHandle(ProcessHandle, KernelMode);
-    return Status;
-
-}
-
-NTSTATUS 
-MapUserModeAddressToSystemSpace(
-    __in PVOID Buffer, 
-    __in ULONG Length, 
-    __in LOCK_OPERATION Operation,
-    __out PMDL* OutputMdl, 
-    __out PVOID* MappedBuffer
-    ) 
-{
-
-    if (OutputMdl == NULL || MappedBuffer == NULL)
-    {
-        return STATUS_INVALID_PARAMETER;
-    }
-
-    NTSTATUS Status;
-
-    PMDL mdl = IoAllocateMdl(Buffer, Length, FALSE, FALSE, NULL);
-
-    if (mdl == NULL)
-    {
-        D_ERROR_ARGS("Failed to allocate MDL for buffer 0x%p", Buffer);
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    __try
-    {
-
-        MmProbeAndLockPages(mdl, UserMode, Operation);
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-
-        Status = GetExceptionCode();
-        D_ERROR_STATUS_ARGS("Exception while locking buffer 0x%p", Status, Buffer);
-        IoFreeMdl(mdl);
-        return Status;
-    }
-
-    PVOID buffer = MmGetSystemAddressForMdlSafe(mdl, NormalPagePriority | MdlMappingNoExecute);
-
-    if (!buffer)
-    {
-        D_ERROR_ARGS("Could not call MmGetSystemAddressForMdlSafe() with buffer: 0x%p", Buffer);
-        MmUnlockPages(mdl);
-        IoFreeMdl(mdl);
-        return STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    *OutputMdl = mdl;
-    *MappedBuffer = buffer;
-
-    return STATUS_SUCCESS;
-}
-
-
-NTSTATUS 
+NTSTATUS
 InitializeEventBuffer(
-    __out PCIRCULAR_BUFFER* CircularBufferAddress
-    )
+	__out PCIRCULAR_BUFFER* CircularBufferAddress
+)
 {
-    NTSTATUS Status = STATUS_SUCCESS;
-    BOOLEAN AllocatedUserModeMemory = FALSE;
-    BOOLEAN MappedUserModeMemory = FALSE;
-    g_Sync.BufferSize = BUFFER_SIZE;
+	NTSTATUS Status = STATUS_SUCCESS;
+	g_Sync.BufferSize = BUFFER_SIZE;
 
-    if (CircularBufferAddress == NULL)
-    {
-        return STATUS_INVALID_PARAMETER;
-    }
+	if (CircularBufferAddress == NULL)
+	{
+		return STATUS_INVALID_PARAMETER;
+	}
 
-    if (g_Sync.IsMapped)
-    {
-        // Already mapped. 
-        return STATUS_ALREADY_INITIALIZED;
-    }
-    
-    g_Sync.ClientProcessId = HandleToUlong(PsGetCurrentProcessId());
+	if (g_Sync.IsMapped)
+	{
+		// Already mapped. 
+		return STATUS_ALREADY_INITIALIZED;
+	}
 
-    D_INFO("ZwAllocateVirtualMemory: Allocating event buffer...");
+	g_Sync.ClientProcessId = HandleToUlong(PsGetCurrentProcessId());
+	Status = GetProcessHandleById(g_Sync.ClientProcessId, &g_Sync.ClientProcessHandle);
 
-    // Allocate pages for buffer
-    Status = ZwAllocateVirtualMemory(
-        NtCurrentProcess(),
-        &g_Sync.UserModeBase, 
-        0, 
-        &g_Sync.BufferSize,
-        MEM_RESERVE | MEM_COMMIT, 
-        PAGE_READWRITE
-    );
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS_ARGS("GetProcessHandleById failed: Could not get a handle to process %d", Status, g_Sync.ClientProcessId);
+		return Status;
+	}
 
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS("Could not allocate communication buffer", Status);
-        goto cleanup;
-    }
+	Status = AllocateBufferMemory();
 
-    AllocatedUserModeMemory = TRUE;
-    D_INFO_ARGS("Event buffer allocated! UserModeBase=0x%p", g_Sync.UserModeBase);
-    D_INFO("Mapping EventBuffer to system space...");
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("Could not allocate buffer event", Status);
+		goto cleanup;
+	}
 
-    Status = MapUserModeAddressToSystemSpace(
-        g_Sync.UserModeBase,
-        BUFFER_SIZE,
-        IoWriteAccess, 
-        &g_Sync.Mdl, 
-        &g_Sync.KernelModeBase
-    );
+	g_Sync.CircularBuffer->Count = 0;
+	g_Sync.CircularBuffer->BaseAddress = (PCHAR)g_Sync.UserModeBase + POINTER_BUFFER_OFFSET;
 
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS("Could not map circular buffer address to system space", Status);
-        goto cleanup;
-    }
-    
-    D_INFO_ARGS("EventBuffer mapped to system space at 0x%p", g_Sync.KernelModeBase);
+	Status = CreateUserModeNotificationEvent();
 
-    MappedUserModeMemory = TRUE;
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("Could not create user mode notification event", Status);
+		goto cleanup;
+	}
 
-    g_Sync.CircularBuffer->Count = 0;
-    g_Sync.CircularBuffer->BaseAddress = (PCHAR)g_Sync.UserModeBase + POINTER_BUFFER_OFFSET;
+	g_Sync.CircularBuffer->WriteOffset = 0;
+	g_Sync.CircularBuffer->ReadOffset = 0;
+	g_Sync.CircularBuffer->BufferSize = POINTER_BUFFER_SIZE;
+	g_Sync.CircularBuffer->MemoryLeft = HEAP_SIZE;
 
-    D_INFO("Creating NotificationEvent...");
+	D_INFO("Initializing Mutex Objects..");
 
-    OBJECT_ATTRIBUTES attr;
-    InitializeObjectAttributes(&attr, NULL, 0, NULL, NULL);
+	ExInitializeFastMutex(&g_Sync.HeapWriterMutex);
+	ExInitializeFastMutex(&g_Sync.PointerWriterMutex);
 
-    Status = ZwCreateEvent(&g_Sync.CircularBuffer->Event, EVENT_ALL_ACCESS, &attr, NotificationEvent, FALSE);
+	AddProcessNotifyRoutine(&EventBufferOnProcessNotify);
 
-    if (!NT_SUCCESS(Status))
-    {
-        D_ERROR_STATUS("Could not create event for user-kernel communication", Status);
-        goto cleanup;
-    }
-
-    g_Sync.CircularBuffer->WriteOffset = 0;
-    g_Sync.CircularBuffer->ReadOffset = 0;
-    g_Sync.CircularBuffer->BufferSize = POINTER_BUFFER_SIZE;
-
-    D_INFO("Initializing Mutex Objects..");
-
-    ExInitializeFastMutex(&g_Sync.HeapWriterMutex);
-    ExInitializeFastMutex(&g_Sync.PointerWriterMutex);
-
-    g_Sync.IsMapped = TRUE;
+	g_Sync.IsMapped = TRUE;
 
 cleanup:
-    if (!NT_SUCCESS(Status))
-    {   
-        if (MappedUserModeMemory)
-        {
-            MmUnlockPages(g_Sync.Mdl);
-            IoFreeMdl(g_Sync.Mdl);
-        }
+	if (!NT_SUCCESS(Status))
+	{
+		FreeEventBuffer();
+	}
+	else
+	{
+		//
+		// Return the base address to the caller
+		//
+		*CircularBufferAddress = (PCIRCULAR_BUFFER)g_Sync.UserModeBase;
+	}
 
-        if (AllocatedUserModeMemory)
-        {
-            ZwFreeVirtualMemory(NtCurrentProcess(), &g_Sync.UserModeBase, NULL, MEM_RELEASE);
-        }
+	return Status;
+}
 
-        RtlZeroMemory(&g_Sync, sizeof(g_Sync));
-    }
-    else
-    {
-        //
-        // Return the base address to the caller
-        //
-        *CircularBufferAddress = (PCIRCULAR_BUFFER)g_Sync.UserModeBase;
-    }
+VOID
+FreeEventBuffer(
+	VOID
+)
+{
+	if (!g_Sync.IsMapped)
+	{
+		return;
+	}
 
-    return Status;
+	FreeBufferMemory();
+	FreeUserModeNotificationEvent();
+
+	if (g_Sync.ClientProcessHandle) 
+	{
+		ObCloseHandle(g_Sync.ClientProcessHandle, KernelMode);
+	}
+
+}
+
+NTSTATUS
+ZeroEventBuffer(
+	VOID
+)
+{
+	RtlZeroMemory(&g_Sync, sizeof(g_Sync));
+
+	return STATUS_SUCCESS;
+}
+
+
+static
+NTSTATUS
+CreateUserModeNotificationEvent(
+	VOID
+	)
+{
+	D_INFO("Creating NotificationEvent...");
+
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	NTSTATUS Status;
+	InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, NULL);
+
+	Status = ZwCreateEvent(&g_Sync.CircularBuffer->Event, EVENT_ALL_ACCESS, &ObjectAttributes, NotificationEvent, FALSE);
+
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("Could not create event for user-kernel communication", Status);
+		goto cleanup;
+	}
+
+	Status = ObReferenceObjectByHandle(
+		g_Sync.CircularBuffer->Event,
+		EVENT_ALL_ACCESS,
+		*ExEventObjectType,
+		KernelMode,
+		&g_Sync.EventObject,
+		NULL
+	);
+
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("ObReferenceObjectByHandle failed. Cannot get event object from handle", Status);
+		goto cleanup;
+	}
+
+cleanup:
+	if (!NT_SUCCESS(Status))
+	{
+		FreeUserModeNotificationEvent();
+	}
+
+	return Status;
+}
+
+
+static
+VOID
+FreeUserModeNotificationEvent(
+	VOID
+)
+{
+	if (g_Sync.CircularBuffer && g_Sync.CircularBuffer->Event)
+	{
+		ObCloseHandle(g_Sync.CircularBuffer->Event, UserMode);
+		g_Sync.CircularBuffer->Event = NULL;
+	}
+
+	if (g_Sync.EventObject)
+	{
+		ObDereferenceObject(g_Sync.EventObject);
+		g_Sync.EventObject = NULL;
+	}
+}
+
+
+static
+NTSTATUS
+AllocateBufferMemory(
+	VOID
+	)
+{
+	NTSTATUS Status;
+
+	D_INFO("ZwAllocateVirtualMemory: Allocating event buffer...");
+
+	// Allocate pages for buffer
+	Status = ZwAllocateVirtualMemory(
+		NtCurrentProcess(),
+		&g_Sync.UserModeBase,
+		0,
+		&g_Sync.BufferSize,
+		MEM_RESERVE | MEM_COMMIT,
+		PAGE_READWRITE
+	);
+
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("Could not allocate communication buffer", Status);
+		goto cleanup;
+	}
+
+	D_INFO_ARGS("Event buffer allocated! UserModeBase=0x%p", g_Sync.UserModeBase);
+	D_INFO("Mapping EventBuffer to system space...");
+
+	Status = MapUserModeAddressToSystemSpace(
+		g_Sync.UserModeBase,
+		BUFFER_SIZE,
+		IoWriteAccess,
+		&g_Sync.Mdl,
+		&g_Sync.KernelModeBase
+	);
+
+	if (!NT_SUCCESS(Status))
+	{
+		D_ERROR_STATUS("Could not map circular buffer address to system space", Status);
+		goto cleanup;
+	}
+
+	D_INFO_ARGS("EventBuffer mapped to system space at 0x%p", g_Sync.KernelModeBase);
+
+cleanup:
+	if (!NT_SUCCESS(Status))
+	{
+		FreeBufferMemory();
+	}
+
+	return Status;
+}
+
+static
+VOID
+FreeBufferMemory(
+	VOID
+)
+{
+	if (g_Sync.Mdl)
+	{
+		UnlockFreeMdl(g_Sync.Mdl);
+		g_Sync.Mdl = NULL;
+	}
+
+	if (g_Sync.UserModeBase)
+	{
+		ZwFreeVirtualMemory(g_Sync.ClientProcessHandle, &g_Sync.UserModeBase, NULL, MEM_RELEASE);
+		g_Sync.UserModeBase = NULL;
+	}
 }
 
 NTSTATUS 
@@ -291,6 +379,7 @@ AllocateBufferEvent(
 
     if (Left < EventSize)
     {
+		// Release Padding Memory
         InterlockedAdd(&g_Sync.CircularBuffer->MemoryLeft, g_Sync.LastPadding - Left);
         g_Sync.LastPadding = Left;
         g_Sync.HeapOffset = 0;
@@ -346,7 +435,7 @@ SendBufferEvent(
         goto cleanup;
     }
 
-    KeSetEvent(&g_Sync.EventObject, 0, FALSE);
+    KeSetEvent(g_Sync.EventObject, 0, FALSE);
 
     ULONG EventHeapOffset = (ULONG)((PUCHAR)Event - (PUCHAR)g_Sync.KernelModeBase);
        
@@ -405,8 +494,8 @@ SendOrCancelBufferEvent(
 
 	if (!NT_SUCCESS(Status))
 	{
-		//PCSTR EventTypeStr = Event_GetEventName((PEVENT_HEADER)Event);
-		D_ERROR_STATUS_ARGS("Could not send buffer event of type '%s'", Status, g_EventTypeStr);
+		PCSTR EventTypeStr = Event_GetEventName((PEVENT_HEADER)Event);
+		D_ERROR_STATUS_ARGS("Could not send buffer event of type '%s'", Status, EventTypeStr);
 		CancelBufferEvent(Event);
 	}
 

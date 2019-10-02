@@ -6,7 +6,7 @@ InitializeRegistryProvider(
     VOID
     );
 
-NTSTATUS
+VOID
 ReleaseRegistryProvider(
     VOID
     );
